@@ -20,7 +20,7 @@ class HypencoderModelConfig:
 
     checkpoint_path: Optional[str] = None
 
-    model_type: Literal["hypencoder", "biencoder"] = "hypencoder"
+    model_type: str = "hypencoder"
     shared_encoder: bool = False
 
 
@@ -116,12 +116,12 @@ class HypencoderTrainerConfig:
 
 @dataclass
 class HypencoderTrainingConfig:
-    model_config = HypencoderModelConfig(
+    model_config:HypencoderModelConfig = HypencoderModelConfig(
     )
-    data_config = HypencoderDataConfig(
+    data_config:HypencoderDataConfig = HypencoderDataConfig(
         training_data_jsonl="",
     )
-    trainer_config = HypencoderTrainerConfig(
+    trainer_config:HypencoderTrainerConfig = HypencoderTrainerConfig(
         hf_trainer_config=HFTrainerConfig(),
     )
 
