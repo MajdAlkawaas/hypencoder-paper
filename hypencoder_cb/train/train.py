@@ -25,6 +25,94 @@ DEFAULT_CACHE_DIR = os.environ.get(
 )
 
 
+# Add this new function to train.py
+import torch.nn as nn
+
+def reinitialize_hyper_head(model: nn.Module):
+    """
+    Finds the Hypencoder query encoder and re-initializes its hyper-head parameters.
+    """
+    if hasattr(model, 'query_encoder') and isinstance(model.query_encoder, Hypencoder):
+        print("Found Hypencoder query encoder. Re-initializing hyper-head.")
+        query_encoder = model.query_encoder
+
+        # Manually re-initialize all hyper-head parameters
+        # Define custom layers and their initialization types
+        custom_layers = {
+            'hyper_base_matrices': 'normal',
+            'weight_query_embeddings': 'normal',
+            'hyper_base_vectors': 'zeros',
+            'bias_query_embeddings': 'zeros',
+            'weight_hyper_projection': 'xavier',
+            'bias_hyper_projection': 'xavier',
+            'key_projections': 'xavier',
+            'value_projections': 'xavier'
+        }
+
+        with torch.no_grad():
+            # Validate weight_shapes and bias_shapes
+            weight_shapes_len = len(query_encoder.weight_shapes) if hasattr(query_encoder, 'weight_shapes') else 0
+            bias_shapes_len = len(query_encoder.bias_shapes) if hasattr(query_encoder, 'bias_shapes') else 0
+            if weight_shapes_len == 0 or bias_shapes_len == 0:
+                raise ValueError("weight_shapes or bias_shapes not found or empty")
+
+            # Reinitialize weight-related parameters
+            for layer_name, init_type in custom_layers.items():
+                if 'hyper_base_vectors' in layer_name or 'bias_' in layer_name:
+                    continue  # Handle bias-related layers separately
+                param_list = getattr(query_encoder, layer_name, None)
+                if param_list is None:
+                    print(f"Warning: {layer_name} not found in model")
+                    continue
+                expected_len = weight_shapes_len if layer_name in ['hyper_base_matrices', 'weight_query_embeddings'] else min(weight_shapes_len, len(param_list))
+                if len(param_list) < expected_len:
+                    print(f"Warning: {layer_name} has fewer parameters ({len(param_list)}) than expected ({expected_len})")
+                for i in range(min(len(param_list), expected_len)):
+                    param = param_list[i]
+                    if isinstance(param, nn.Linear):
+                        nn.init.xavier_uniform_(param.weight)
+                        if param.bias is not None:
+                            nn.init.zeros_(param.bias)
+                    else:
+                        if init_type == 'xavier':
+                            nn.init.xavier_uniform_(param)
+                        elif init_type == 'normal':
+                            nn.init.normal_(param, mean=0.0, std=0.02)
+                    print(f"Reinitialized {layer_name}[{i}] with {init_type}")
+
+            # Reinitialize bias-related parameters
+            for layer_name, init_type in custom_layers.items():
+                if 'hyper_base_vectors' not in layer_name and 'bias_' not in layer_name:
+                    continue  # Handle weight-related layers above
+                param_list = getattr(query_encoder, layer_name, None)
+                if param_list is None:
+                    print(f"Warning: {layer_name} not found in model")
+                    continue
+                expected_len = bias_shapes_len if layer_name in ['hyper_base_vectors', 'bias_query_embeddings'] else min(bias_shapes_len, len(param_list))
+                if len(param_list) < expected_len:
+                    print(f"Warning: {layer_name} has fewer parameters ({len(param_list)}) than expected ({expected_len})")
+                for i in range(min(len(param_list), expected_len)):
+                    param = param_list[i]
+                    if isinstance(param, nn.Linear):
+                        nn.init.xavier_uniform_(param.weight)
+                        if param.bias is not None:
+                            nn.init.zeros_(param.bias)
+                    else:
+                        if init_type == 'xavier':
+                            nn.init.xavier_uniform_(param)
+                        elif init_type == 'normal':
+                            nn.init.normal_(param, mean=0.0, std=0.02)
+                        elif init_type == 'zeros':
+                            nn.init.zeros_(param)
+                    print(f"Reinitialized {layer_name}[{i}] with {init_type}")
+
+        print("Hyper-head reinitialization complete.")
+
+    else:
+        print("Warning: Could not find Hypencoder query encoder to re-initialize.")
+
+
+
 def load_model(model_config: HypencoderModelConfig):
     config_cls_lookup = {
         "hypencoder": HypencoderDualEncoderConfig,
@@ -55,6 +143,11 @@ def load_model(model_config: HypencoderModelConfig):
         model = model_cls.from_pretrained(
             model_config.checkpoint_path, config=config
         )
+        # --- A CALL ADDED HERE ---
+        # This will overwrite the loaded hyper-head weights with random ones.
+        reinitialize_hyper_head(model)
+        # ---------------------------------
+
     else:
         model = model_cls(config)
 
