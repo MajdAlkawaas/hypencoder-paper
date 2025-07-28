@@ -27,7 +27,10 @@ model_config:
     - {}
     # - {"use_in_batch_negatives": true, "only_use_first_item": true}
 data_config:
-  training_data_jsonl: .../hypencoder/data/train.jsonl
+# Use the official training dataset with teacher scores
+  training_huggingface_dataset: jfkback/hypencoder-msmarco-training-dataset
+  training_data_split: train
+  # training_data_jsonl: .../hypencoder/data/train.jsonl
   validation_data_jsonl: null
   positive_filter_type: first
   label_key: score
@@ -35,7 +38,7 @@ data_config:
   num_negatives_to_sample: 7
 trainer_config:
   hf_trainer_config:
-    output_dir: .../hypencoder/hypencoder.6_layer
+    output_dir: .../hypencoder/hypencoder-trained-hyperhead-only.6_layer
     overwrite_output_dir: false
     remove_unused_columns: false
     evaluation_strategy: 'no'
