@@ -61,6 +61,7 @@ class HFTrainerConfig:
     # Set to zero to avoid data loading hang issues
     dataloader_num_workers: int = 0
     # Dataloader parameters were deactivated to avoid data loading hang issues
+    # This parameter was introduced in later versions of huggingface
     # dataloader_persistent_workers: bool = False
     # dataloader_prefetch_factor: Optional[int] = None
     ignore_data_skip: bool = False
