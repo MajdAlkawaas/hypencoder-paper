@@ -191,8 +191,12 @@ class MarginMSELoss(SimilarityAndLossBase):
         assert num_label_items == 2
         assert num_similarity_queries == num_label_queries
 
-        similarity = self.normalization_fn(similarity)
-        labels = self.normalization_fn(labels)
+        # --- THESE ARE THE LINES TO REMOVE ---
+        # normalization_fn() method does not exit anywhere in this 
+        # codebase or in pytorch or huggingface 
+        # similarity = self.normalization_fn(similarity)
+        # labels = self.normalization_fn(labels)
+        # -------------------------------------
 
         margin = similarity[:, 0] - similarity[:, 1]
         teacher_margin = labels[:, 0] - labels[:, 1]
