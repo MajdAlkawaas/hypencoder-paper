@@ -51,15 +51,18 @@ class HFTrainerConfig:
     remove_unused_columns: bool = False
 
     evaluation_strategy: str = "no"
-    eval_strategy: str = "no"
+    # this parameter was deactivated because it is depricated and removed from HF
+    # eval_strategy: str = "no"
     eval_steps: int = 500
 
     per_device_train_batch_size: int = 1
     per_device_eval_batch_size: int = 1
     gradient_accumulation_steps: int = 1
+    # Set to zero to avoid data loading hang issues
     dataloader_num_workers: int = 0
-    dataloader_persistent_workers: bool = False
-    dataloader_prefetch_factor: Optional[int] = None
+    # Dataloader parameters were deactivated to avoid data loading hang issues
+    # dataloader_persistent_workers: bool = False
+    # dataloader_prefetch_factor: Optional[int] = None
     ignore_data_skip: bool = False
 
     learning_rate: float = 5e-5
