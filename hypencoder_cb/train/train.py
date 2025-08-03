@@ -1,11 +1,12 @@
 import os
 from typing import Optional
-
+import torch.nn as nn
+import torch
 import fire
 from datasets import load_dataset
 from omegaconf import OmegaConf
 from transformers import AutoTokenizer, Trainer, TrainingArguments
-
+from hypencoder_cb.modeling.hypencoder import Hypencoder
 from hypencoder_cb.modeling.hypencoder import (
     HypencoderDualEncoder,
     HypencoderDualEncoderConfig,
@@ -20,14 +21,16 @@ from hypencoder_cb.train.args import (
 )
 from hypencoder_cb.train.data_collator import GeneralDualEncoderCollator
 
+# Added this import at the top of the file
+from hypencoder_cb.utils.timeout_utils import timeout, TimeoutException
+
 DEFAULT_CACHE_DIR = os.environ.get(
     "HYPENCODER_CACHE_DIR", os.path.expanduser("~/.cache/hypencoder")
 )
 
 
-# Add this new function to train.py
-import torch.nn as nn
 
+# Added this new function to train.py
 def reinitialize_hyper_head(model: nn.Module):
     """
     Finds the Hypencoder query encoder and re-initializes its hyper-head parameters.
@@ -114,6 +117,11 @@ def reinitialize_hyper_head(model: nn.Module):
 
 
 def load_model(model_config: HypencoderModelConfig):
+
+    # --- FLAG ---
+    print("\n--- STAGE: Loading Model ---")
+    print("FLAG: [load_model] Starting model loading process...")
+    
     config_cls_lookup = {
         "hypencoder": HypencoderDualEncoderConfig,
         "biencoder": BaseDualEncoderConfig,
@@ -127,6 +135,9 @@ def load_model(model_config: HypencoderModelConfig):
     config_cls = config_cls_lookup[model_config.model_type]
     model_cls = model_cls_lookup[model_config.model_type]
 
+    # --- FLAG ---
+    print(f"FLAG: [load_model] Determined model class: {model_cls.__name__}")
+    
     config = config_cls(
         query_encoder_kwargs=OmegaConf.to_container(
             model_config.query_encoder_kwargs
@@ -139,22 +150,39 @@ def load_model(model_config: HypencoderModelConfig):
         shared_encoder=model_config.shared_encoder,
     )
 
+    # --- FLAG ---
+    print("FLAG: [load_model] Model configuration object created.")
+
     if model_config.checkpoint_path is not None:
+         # --- FLAG ---
+        print(f"FLAG: [load_model] Loading pre-trained model from checkpoint: {model_config.checkpoint_path}")
         model = model_cls.from_pretrained(
             model_config.checkpoint_path, config=config
         )
+
+        # --- FLAG ---
+        print("FLAG: [load_model] Pre-trained model loaded successfully.")
         # --- A CALL ADDED HERE ---
         # This will overwrite the loaded hyper-head weights with random ones.
         reinitialize_hyper_head(model)
         # ---------------------------------
 
     else:
+        # --- FLAG ---
+        print("FLAG: [load_model] Initializing new model from scratch.")
         model = model_cls(config)
+        # --- FLAG ---
+        print("FLAG: [load_model] New model initialized.")
 
+    # --- FLAG ---
+    print("FLAG: [load_model] Model loading process complete.")
     return model
 
 
 def load_data(data_config: HypencoderDataConfig):
+    # --- FLAG ---
+    print("\n--- STAGE: Loading Data ---")
+    print("FLAG: [load_data] Starting data loading process...")
     cache_dir = os.environ.get("HF_HOME", DEFAULT_CACHE_DIR)
 
     if (data_config.training_data_jsonl is None) == (
@@ -175,12 +203,16 @@ def load_data(data_config: HypencoderDataConfig):
         )
 
     if data_config.training_huggingface_dataset is not None:
+        # --- FLAG ---
+        print(f"FLAG: [load_data] Loading training data from Hugging Face dataset: {data_config.training_huggingface_dataset}")
         training_data = load_dataset(
             data_config.training_huggingface_dataset,
             split=data_config.training_data_split,
             cache_dir=cache_dir,
         )
     elif data_config.training_data_jsonl is not None:
+        # --- FLAG ---
+        print(f"FLAG: [load_data] Loading training data from local JSONL file: {data_config.training_data_jsonl}")
         training_data = load_dataset(
             "json",
             data_files=data_config.training_data_jsonl,
@@ -188,14 +220,23 @@ def load_data(data_config: HypencoderDataConfig):
             cache_dir=cache_dir,
         )
 
+    # --- FLAG ---
+    print(f"FLAG: [load_data] Training data loaded. Number of samples: {len(training_data)}")
+
     validation_data = None
     if data_config.validation_huggingface_dataset is not None:
+         # --- FLAG ---
+        print(f"FLAG: [load_data] Loading validation data from Hugging Face dataset: {data_config.validation_huggingface_dataset}")
+        # TODO: This might be wrong, i think it should not be assinged to training
         training_data = load_dataset(
             data_config.validation_huggingface_dataset,
             split=data_config.validation_data_split,
             cache_dir=cache_dir,
         )
     elif data_config.validation_data_jsonl is not None:
+        # --- FLAG ---
+        print(f"FLAG: [load_data] Loading validation data from local JSONL file: {data_config.validation_data_jsonl}")
+        # TODO: This might be wrong, i think it should not be assinged to training
         training_data = load_dataset(
             "json",
             data_files=data_config.validation_data_jsonl,
@@ -211,9 +252,12 @@ def get_collator(
     trainer_config: HypencoderTrainerConfig,
     tokenizer,
 ):
+     # --- FLAG ---
+    print("\n--- STAGE: Initializing Data Collator ---")
+    print("FLAG: [get_collator] Creating GeneralDualEncoderCollator...")
     return GeneralDualEncoderCollator(
         tokenizer=tokenizer,
-        num_negatives_to_sample=data_config.num_items_to_sample,
+        num_negatives_to_sample=data_config.num_negatives_to_sample,
         positive_filter=data_config.positive_filter_type,
         positive_filter_kwargs=data_config.positive_filter_kwargs,
         positive_sampler="random",
@@ -225,20 +269,32 @@ def get_collator(
 
 
 def load_tokenizer(model_config: HypencoderModelConfig):
+    # --- FLAG ---
+    print("\n--- STAGE: Loading Tokenizer ---")
+    print(f"FLAG: [load_tokenizer] Loading tokenizer: {model_config.tokenizer_pretrained_model_name_or_path}")
     return AutoTokenizer.from_pretrained(
         model_config.tokenizer_pretrained_model_name_or_path
     )
 
 
 def train_model(cfg: HypencoderTrainingConfig):
+    # --- FLAG ---
+    print("\n--- STAGE: Main Training Setup ---")
+    print("FLAG: [train_model] Beginning training orchestration.")
+    
+    print("--- CONFIGURATION ---")
     print(cfg)
+    print("---------------------\n")
     resume_from_checkpoint = cfg.trainer_config.resume_from_checkpoint
 
     training_data, validation_data = load_data(cfg.data_config)
     tokenizer = load_tokenizer(cfg.model_config)
     model = load_model(cfg.model_config)
     collator = get_collator(cfg.data_config, cfg.trainer_config, tokenizer)
-
+    
+    # --- FLAG ---
+    print("\n--- STAGE: Initializing Trainer ---")
+    print("FLAG: [train_model] Preparing TrainingArguments...")
     train_arguments_kwargs = None
     hf_trainer_config = cfg.trainer_config.hf_trainer_config
 
@@ -247,10 +303,18 @@ def train_model(cfg: HypencoderTrainingConfig):
     else:
         train_arguments_kwargs = hf_trainer_config.__dict__
 
+
+    train_arguments_kwargs['torch_compile'] = False
     training_args = TrainingArguments(
         **train_arguments_kwargs,
     )
 
+
+    # --- FLAG ---
+    print("FLAG: [train_model] TrainingArguments created.")
+    
+    # --- FLAG ---
+    print("FLAG: [train_model] Instantiating Hugging Face Trainer...")
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -259,6 +323,8 @@ def train_model(cfg: HypencoderTrainingConfig):
         data_collator=collator,
         tokenizer=tokenizer,
     )
+    # --- FLAG ---
+    print("FLAG: [train_model] Trainer instantiated successfully.")
 
     print("Starting training")
     if resume_from_checkpoint is True:
@@ -272,8 +338,49 @@ def train_model(cfg: HypencoderTrainingConfig):
 
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
+    # --- THIS IS THE CRITICAL ADDITION ---
+    print("\n--- STAGE: Saving Final Model ---")
+    final_output_dir = training_args.output_dir
+    print(f"FLAG: [train_model] Explicitly saving model to: {final_output_dir}")
+    os.mkdir("./trained_models/4_layers_frozen")
+    trainer.save_model("./trained_models/4_layers_frozen")
+    tokenizer.save_pretrained("./trained_models/4_layers_frozen")
+
+    
+    trainer.save_model(final_output_dir)
+    tokenizer.save_pretrained(final_output_dir)
+
+    
+    print("FLAG: [train_model] Final model and tokenizer saved successfully.")
+    # -------------------------------------
+    # # --- THIS IS THE MODIFIED SECTION ---
+    # try:
+    #     # We will set a timeout of, for example, 3 minutes (180 seconds)
+    #     # for the entire training run. If it hangs on the first step for this long,
+    #     # something is wrong.
+    #     with timeout(seconds=300):
+    #         trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+        
+    #     print("FLAG: [train_model] Training complete.")
+    
+    # except TimeoutException:
+    #     print("\n" + "="*50)
+    #     print("ERROR: TRAINING TIMED OUT!")
+    #     print("The trainer.train() call did not complete within the time limit.")
+    #     print("This strongly indicates a deadlock in the data loading pipeline.")
+    #     print("Please ensure 'dataloader_num_workers' is 0 in your config.")
+    #     print("="*50 + "\n")
+    #     # Exit gracefully so you know the timeout worked
+    #     exit(1)
+    # # --- END OF MODIFIED SECTION ---
+    # --- FLAG ---
+    # print("FLAG: [train_model] Training complete.")
+
 
 def run_training(config_path: Optional[str] = None) -> None:
+    # --- FLAG ---
+    print("--- SCRIPT START ---")
+    print("FLAG: [run_training] Parsing configuration...")
     schema = OmegaConf.structured(HypencoderTrainingConfig)
 
     if config_path is not None:
@@ -281,7 +388,8 @@ def run_training(config_path: Optional[str] = None) -> None:
         config = OmegaConf.merge(schema, config)
     else:
         config = schema
-
+    # --- FLAG ---
+    # print("FLAG: [run_training] Configuration parsed successfully. Starting model training...")
     train_model(config)
 
 
