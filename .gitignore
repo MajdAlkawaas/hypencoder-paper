@@ -163,3 +163,18 @@ cython_debug/
 .vscode
 /wandb
 /node_modules
+
+
+
+# Added by Majd
+
+# Datasets folders
+cached_datasets/
+split_dataset/
+encoded_validation_sets/
+# Dataset JSONL file
+from_cached_msmarco_train_local.jsonl
+
+# Model checkpoints folders
+debug_run_output_6_layers/
+trained_models/
