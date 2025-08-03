@@ -114,6 +114,9 @@ class GeneralDualEncoderCollator:
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
 
+        # --- FLAG ---
+        # print(f"\n[Collator] Received batch of {len(features)} features.")
+        
         queries = [
             {"input_ids": f["query"]["tokenized_content"]} for f in features
         ]
@@ -121,8 +124,15 @@ class GeneralDualEncoderCollator:
         items, labels = [], []
 
         for i, feature in enumerate(features):
+            # --- FLAG ---
+            # print(f"[Collator] Processing feature #{i+1}/{len(features)}. Query ID: {feature['query'].get('id', 'N/A')}")
+            
+            # --- FLAG ---
+            # print(f"[Collator]  - Available items: {len(feature['items'])}")
             positive_items = self.positive_filter(feature["items"])
 
+            # --- FLAG ---
+            # print(f"[Collator]  - Found {len(positive_items)} positive items after filtering.")
             if len(positive_items) < self.num_positives_to_sample:
                 raise ValueError(
                     f"Positive items less than num_positives_to_sample: {len(positive_items)}"
@@ -130,12 +140,16 @@ class GeneralDualEncoderCollator:
 
             selected_items = self.positive_sampler(positive_items)
 
+             # --- FLAG ---
+            # print(f"[Collator]  - Sampled {len(selected_items)} positive items.")
             assert len(selected_items) == self.num_positives_to_sample
 
             negative_items = [
                 item for item in feature["items"] if item not in positive_items
             ]
 
+            # --- FLAG ---
+            # print(f"[Collator]  - Found {len(negative_items)} negative items.")
             if len(negative_items) < self.num_negatives_to_sample:
                 raise ValueError(
                     f"Negative items less than num_negatives_to_sample: {len(negative_items)}"
@@ -143,6 +157,8 @@ class GeneralDualEncoderCollator:
 
             selected_items += self.negative_sampler(negative_items)
 
+            # --- FLAG ---
+            # print(f"[Collator]  - Sampled {self.num_negatives_to_sample} negative items. Total selected: {len(selected_items)}")
             assert (
                 len(selected_items)
                 == self.num_negatives_to_sample + self.num_positives_to_sample
@@ -160,6 +176,8 @@ class GeneralDualEncoderCollator:
                     [item[self.label_key] for item in selected_items]
                 )
 
+        # --- FLAG ---
+        # print(f"[Collator] Finished processing all features. Now padding {len(queries)} queries and {len(items)} items.")
         query_inputs = self.tokenizer.pad(
             queries,
             padding=self.query_padding_mode,
@@ -178,6 +196,8 @@ class GeneralDualEncoderCollator:
             **self.item_pad_kwargs,
         )
 
+        # --- FLAG ---
+        # print("[Collator] Padding complete. Finalizing batch.")
         if labels == []:
             labels = None
         else:
