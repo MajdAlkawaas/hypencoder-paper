@@ -3,7 +3,11 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
 from transformers import AutoTokenizer
+import logging
 
+
+# Create a logger specific to this module
+logger = logging.getLogger(__name__)
 
 def positive_filter_factory(
     type: str, **kwargs
@@ -40,6 +44,8 @@ class GeneralDualEncoderCollator:
         self,
         tokenizer,
         num_negatives_to_sample: int,
+        # --- ADD NEW PARAMETER ---
+        log_level: bool = False,
         positive_filter: Union[
             Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
         ] = "type",
@@ -61,6 +67,9 @@ class GeneralDualEncoderCollator:
         query_pad_kwargs: Optional[Dict[str, Any]] = None,
         item_pad_kwargs: Optional[Dict[str, Any]] = None,
     ):
+        
+        self.log_level = log_level # <-- STORE THE FLAG
+
         random.seed(random_seed)
 
         if isinstance(tokenizer, str):
@@ -114,8 +123,9 @@ class GeneralDualEncoderCollator:
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
 
-        # --- FLAG ---
-        # print(f"\n[Collator] Received batch of {len(features)} features.")
+        # --- USE THE FLAG TO CONTROL LOGGING ---
+        if self.log_level:
+            logger.info(f"Received batch of {len(features)} features.")
         
         queries = [
             {"input_ids": f["query"]["tokenized_content"]} for f in features
@@ -124,15 +134,17 @@ class GeneralDualEncoderCollator:
         items, labels = [], []
 
         for i, feature in enumerate(features):
-            # --- FLAG ---
-            # print(f"[Collator] Processing feature #{i+1}/{len(features)}. Query ID: {feature['query'].get('id', 'N/A')}")
+            if self.log_level:
+                logger.info(f"Processing feature #{i+1}/{len(features)}. Query ID: {feature['query'].get('id', 'N/A')}")
             
             # --- FLAG ---
             # print(f"[Collator]  - Available items: {len(feature['items'])}")
             positive_items = self.positive_filter(feature["items"])
 
-            # --- FLAG ---
-            # print(f"[Collator]  - Found {len(positive_items)} positive items after filtering.")
+            if self.log_level:
+                logger.info(f"  - Found {len(positive_items)} positive items after filtering.")
+
+
             if len(positive_items) < self.num_positives_to_sample:
                 raise ValueError(
                     f"Positive items less than num_positives_to_sample: {len(positive_items)}"
@@ -176,8 +188,9 @@ class GeneralDualEncoderCollator:
                     [item[self.label_key] for item in selected_items]
                 )
 
-        # --- FLAG ---
-        # print(f"[Collator] Finished processing all features. Now padding {len(queries)} queries and {len(items)} items.")
+        if self.log_level:
+            logger.info(f"Finished processing all features. Now padding {len(queries)} queries and {len(items)} items.")
+        
         query_inputs = self.tokenizer.pad(
             queries,
             padding=self.query_padding_mode,
@@ -196,8 +209,9 @@ class GeneralDualEncoderCollator:
             **self.item_pad_kwargs,
         )
 
-        # --- FLAG ---
-        # print("[Collator] Padding complete. Finalizing batch.")
+        if self.log_level:
+            logger.info("Padding complete. Finalizing batch.")
+            
         if labels == []:
             labels = None
         else:

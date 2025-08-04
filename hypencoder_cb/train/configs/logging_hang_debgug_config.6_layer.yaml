@@ -1,0 +1,65 @@
+# Debug config
+# This file was created to debug a dataloading hang problem
+
+# These configs where USED FOR TRAINING THE CURRENT FORZEN ENCODERS MODEL
+
+
+# --- NEW CONFIGS SECTION FOR LOGGING ---
+logging_config:
+  # Set to "WARNING" for a quiet run, "INFO" to see setup steps.
+  script_log_level: "INFO" 
+  # Set this to true ONLY when you need to debug the batch creation process itself.
+  log_collator: false
+
+
+model_config:
+  checkpoint_path: jfkback/hypencoder.6_layer
+  tokenizer_pretrained_model_name_or_path: google-bert/bert-base-uncased
+  query_encoder_kwargs:
+    freeze_transformer: true
+    model_name_or_path: google-bert/bert-base-uncased
+    converter_kwargs:
+      vector_dimensions: [768, 768, 768, 768, 768, 768, 768, 1]
+      activation_type: relu
+      do_residual_on_last: false
+  passage_encoder_kwargs:
+    freeze_transformer: true
+    model_name_or_path: google-bert/bert-base-uncased
+    pooling_type: cls
+  shared_encoder: true
+  loss_type:
+    - margin_mse
+  loss_kwargs:
+    - {}
+
+data_config:
+  # --- CHANGE #1: Use the LOCAL file, not the Hub dataset ---
+  training_huggingface_dataset: null
+  training_data_jsonl: from_cached_msmarco_train_local.jsonl # <-- Point to your new local file
+  
+  training_data_split: train
+  positive_filter_type: first
+  num_positives_to_sample: 1
+  num_negatives_to_sample: 7
+
+trainer_config:
+  hf_trainer_config:
+    torch_compile: false
+    gradient_accumulation_steps: 2
+    output_dir: ./debug_run_output_6_layers
+    overwrite_output_dir: true # Allow overwriting for easy re-runs
+    num_train_epochs: 1
+
+    # --- CHANGE #2: Use a tiny batch size for fast first step ---
+    per_device_train_batch_size: 64 # it was 2 originally
+    # --- CHANGE #3: Ensure multiprocessing is off ---
+    # to avoid the possibility of a data hang
+    dataloader_num_workers: 0 # <-- Must be zero
+
+    # Other settings
+    learning_rate: 5e-5
+    logging_steps: 100 # Log the loss of the very first step
+    save_strategy: "steps"
+    # max_steps: 10
+    bf16: true
+    fp16: false 

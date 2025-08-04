@@ -5,6 +5,14 @@ from typing import Any, Dict, Literal, Optional
 import fire
 from omegaconf import OmegaConf
 
+# Added LoggingConfig dataclass for controlling the logging behavior
+@dataclass
+class LoggingConfig:
+    """Configuration for custom logging."""
+    # Controls the overall script logging level.
+    script_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    # Toggles verbose logging inside the DataCollator for debugging batches
+    log_collator : bool = False
 
 @dataclass
 class HypencoderModelConfig:
@@ -128,7 +136,8 @@ class HypencoderTrainingConfig:
     trainer_config:HypencoderTrainerConfig = HypencoderTrainerConfig(
         hf_trainer_config=HFTrainerConfig(),
     )
-
+    # Added the logging configs
+    logging_config: LoggingConfig = field(default_factory=LoggingConfig)
 
 def relative_file_path_to_abs_path(path: str) -> str:
     return os.path.join(os.path.dirname(__file__), path)
