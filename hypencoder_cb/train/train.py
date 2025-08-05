@@ -68,11 +68,11 @@ def reinitialize_hyper_head(model: nn.Module):
                     continue  # Handle bias-related layers separately
                 param_list = getattr(query_encoder, layer_name, None)
                 if param_list is None:
-                    print(f"Warning: {layer_name} not found in model")
+                    logging.warning(f"{layer_name} not found in model")
                     continue
                 expected_len = weight_shapes_len if layer_name in ['hyper_base_matrices', 'weight_query_embeddings'] else min(weight_shapes_len, len(param_list))
                 if len(param_list) < expected_len:
-                    print(f"Warning: {layer_name} has fewer parameters ({len(param_list)}) than expected ({expected_len})")
+                    logging.warning(f"{layer_name} has fewer parameters ({len(param_list)}) than expected ({expected_len})")
                 for i in range(min(len(param_list), expected_len)):
                     param = param_list[i]
                     if isinstance(param, nn.Linear):
@@ -84,7 +84,7 @@ def reinitialize_hyper_head(model: nn.Module):
                             nn.init.xavier_uniform_(param)
                         elif init_type == 'normal':
                             nn.init.normal_(param, mean=0.0, std=0.02)
-                    print(f"Reinitialized {layer_name}[{i}] with {init_type}")
+                    logger.info(f"Reinitialized {layer_name}[{i}] with {init_type}")
 
             # Reinitialize bias-related parameters
             for layer_name, init_type in custom_layers.items():
@@ -154,17 +154,17 @@ def load_model(model_config: HypencoderModelConfig):
     )
 
     # --- FLAG ---
-    print("FLAG: [load_model] Model configuration object created.")
+    logging.info("FLAG: [load_model] Model configuration object created.")
 
     if model_config.checkpoint_path is not None:
          # --- FLAG ---
-        print(f"FLAG: [load_model] Loading pre-trained model from checkpoint: {model_config.checkpoint_path}")
+        logging.info(f"FLAG: [load_model] Loading pre-trained model from checkpoint: {model_config.checkpoint_path}")
         model = model_cls.from_pretrained(
             model_config.checkpoint_path, config=config
         )
 
         # --- FLAG ---
-        print("FLAG: [load_model] Pre-trained model loaded successfully.")
+        logging.info("FLAG: [load_model] Pre-trained model loaded successfully.")
         # --- A CALL ADDED HERE ---
         # This will overwrite the loaded hyper-head weights with random ones.
         reinitialize_hyper_head(model)
@@ -172,13 +172,13 @@ def load_model(model_config: HypencoderModelConfig):
 
     else:
         # --- FLAG ---
-        print("FLAG: [load_model] Initializing new model from scratch.")
+        logging.info("FLAG: [load_model] Initializing new model from scratch.")
         model = model_cls(config)
         # --- FLAG ---
-        print("FLAG: [load_model] New model initialized.")
+        logging.info("FLAG: [load_model] New model initialized.")
 
     # --- FLAG ---
-    print("FLAG: [load_model] Model loading process complete.")
+    logging.info("FLAG: [load_model] Model loading process complete.")
     return model
 
 
@@ -291,7 +291,7 @@ def train_model(cfg: HypencoderTrainingConfig):
 
     logging.basicConfig(
         level=log_level,
-        format="%(asctime)s - %(levelname)s - [%(name)s] - %(message)s",
+        format="%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s",
         stream=sys.stdout,
     )
 
@@ -360,13 +360,13 @@ def train_model(cfg: HypencoderTrainingConfig):
     logger.info("\n--- STAGE: Saving Final Model ---")
     final_output_dir = training_args.output_dir
     logger.info(f"FLAG: [train_model] Explicitly saving model to: {final_output_dir}")
-    os.mkdir("./trained_models/4_layers_frozen")
-    trainer.save_model("./trained_models/4_layers_frozen")
-    tokenizer.save_pretrained("./trained_models/4_layers_frozen")
+    # os.mkdir("./trained_models/4_layers_frozen")
+    # trainer.save_model("./trained_models/4_layers_frozen")
+    # tokenizer.save_pretrained("./trained_models/4_layers_frozen")
 
     
-    trainer.save_model(final_output_dir)
-    tokenizer.save_pretrained(final_output_dir)
+    # trainer.save_model(final_output_dir)
+    # tokenizer.save_pretrained(final_output_dir)
 
     
     logger.info("FLAG: [train_model] Final model and tokenizer saved successfully.")

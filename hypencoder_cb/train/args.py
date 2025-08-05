@@ -10,7 +10,8 @@ from omegaconf import OmegaConf
 class LoggingConfig:
     """Configuration for custom logging."""
     # Controls the overall script logging level.
-    script_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    # script_log_level: str["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    script_log_level: str = "INFO"
     # Toggles verbose logging inside the DataCollator for debugging batches
     log_collator : bool = False
 
@@ -89,7 +90,7 @@ class HFTrainerConfig:
     save_strategy: str = "epoch"
     save_steps: int = 500
     save_total_limit: Optional[int] = None
-    save_only_model: bool = False
+    # save_only_model: bool = False
     save_safetensors: bool = True
 
     bf16: bool = False
