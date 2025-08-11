@@ -90,6 +90,10 @@ class HFTrainerConfig:
     save_strategy: str = "epoch"
     save_steps: int = 500
     save_total_limit: Optional[int] = None
+
+    load_best_model_at_end: bool = False
+    metric_for_best_model: Optional[str] = None
+    
     # save_only_model: bool = False
     save_safetensors: bool = True
 
