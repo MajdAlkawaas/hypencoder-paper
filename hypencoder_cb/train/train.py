@@ -356,27 +356,27 @@ def train_model(cfg: HypencoderTrainingConfig):
 
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
-    # --- THIS IS THE CRITICAL ADDITION ---
+    # --- FLAG ---
+    print("FLAG: [train_model] Training complete.")
+
     logger.info("\n--- STAGE: Saving Final Model ---")
     final_output_dir = training_args.output_dir
     logger.info(f"FLAG: [train_model] Explicitly saving model to: {final_output_dir}")
-    # os.mkdir("./trained_models/4_layers_frozen")
-    # trainer.save_model("./trained_models/4_layers_frozen")
-    # tokenizer.save_pretrained("./trained_models/4_layers_frozen")
-
-    
-    # trainer.save_model(final_output_dir)
-    # tokenizer.save_pretrained(final_output_dir)
-
-    
+    os.mkdir("./trained_models/extended_6_layers_frozen")
+    trainer.save_model("./trained_models/extended_6_layers_frozen")
+    tokenizer.save_pretrained("./trained_models/extended_6_layers_frozen")  
+    trainer.save_model(final_output_dir)
+    tokenizer.save_pretrained(final_output_dir)
     logger.info("FLAG: [train_model] Final model and tokenizer saved successfully.")
+
+
     # -------------------------------------
-    # # --- THIS IS THE MODIFIED SECTION ---
+    # --- THIS IS THE MODIFIED SECTION ---
     # try:
     #     # We will set a timeout of, for example, 3 minutes (180 seconds)
     #     # for the entire training run. If it hangs on the first step for this long,
     #     # something is wrong.
-    #     with timeout(seconds=300):
+    #     with timeout(seconds=600):
     #         trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         
     #     print("FLAG: [train_model] Training complete.")
@@ -391,8 +391,7 @@ def train_model(cfg: HypencoderTrainingConfig):
     #     # Exit gracefully so you know the timeout worked
     #     exit(1)
     # # --- END OF MODIFIED SECTION ---
-    # --- FLAG ---
-    # print("FLAG: [train_model] Training complete.")
+    
 
 
 def run_training(config_path: Optional[str] = None) -> None:
