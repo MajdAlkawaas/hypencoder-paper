@@ -1,0 +1,75 @@
+# These are the configs that I will use for extended training, I have for this specific run access to 5000ada 32GB any modifications I should do to speed up the process as much as possible. I need to also avoid datahang problems that were putting the pod a lagging state where I cannot shut it down or stop it or do anything
+
+# Also if we are using the same source for creating the validation set won't run into a problem of validating on some of the same data we trained on
+
+model_config:
+  checkpoint_path: jfkback/hypencoder.6_layer
+  tokenizer_pretrained_model_name_or_path: google-bert/bert-base-uncased
+  query_encoder_kwargs:
+    freeze_transformer: true
+    model_name_or_path: google-bert/bert-base-uncased
+    converter_kwargs:
+      vector_dimensions: [768, 768, 768, 768, 768, 768, 768, 1]
+      activation_type: relu
+      do_residual_on_last: false
+  passage_encoder_kwargs:
+    freeze_transformer: true
+    model_name_or_path: google-bert/bert-base-uncased
+    pooling_type: cls
+  shared_encoder: true
+  loss_type:
+    - margin_mse
+  loss_kwargs:
+    - {}
+
+
+data_config:
+  # --- CHANGE #1: Use the LOCAL file, not the Hub dataset ---
+  training_huggingface_dataset: null
+  training_data_jsonl: from_cached_msmarco_train_local.jsonl # <-- Point to your new local file
+  
+  training_data_split: train
+  positive_filter_type: first
+  num_positives_to_sample: 1
+  num_negatives_to_sample: 7
+# ------------------------------------------------------
+    
+  # We need a validation set to find the best checkpoint.
+  # Let's create one from the main training set to monitor for overfitting.
+  # The dataset has a 'validation' split we can use.
+  validation_huggingface_dataset: from_cached_msmarco_train_local.jsonl # to avoid data hang problem
+  validation_data_split: validation
+# ------------------------------------------------------
+
+trainer_config:
+  hf_trainer_config:
+
+    output_dir: ./frozen-encoders-extended-run-6-layers
+    overwrite_output_dir: true
+
+    # --- KEY CHANGES FOR THIS EXPERIMENT ---
+
+    # 1. Train for much longer.
+    num_train_epochs: 10
+
+    # 2. Use a more effective learning rate schedule for from-scratch training.
+    learning_rate: 5e-5 # This is still a good starting point
+    lr_scheduler_type: "cosine" # Change from "linear" to "cosine"
+    warmup_ratio: 0.1
+
+    # 3. Enable evaluation to find the best checkpoint.
+    evaluation_strategy: "epoch" # Evaluate at the end of each epoch
+    save_strategy: "epoch"       # Save a checkpoint at the end of each epoch
+    save_total_limit: 10         # Keep the last 10 checkpoints + the best one
+    load_best_model_at_end: true # The final model will be the best one on the validation set
+
+    # --- Other performance settings ---
+    per_device_train_batch_size: 128
+    per_device_eval_batch_size: 256 # Can be larger for evaluation
+    gradient_accumulation_steps: 2
+    bf16: true
+    dataloader_num_workers: 16 # Look into modifying it
+    torch_compile: false # look into modifying it
+    logging_steps: 200
+    bf16: true
+    fp16: false 
