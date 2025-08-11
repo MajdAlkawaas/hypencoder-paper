@@ -1,6 +1,9 @@
-# These are the configs that I will use for extended training, I have for this specific run access to 5000ada 32GB any modifications I should do to speed up the process as much as possible. I need to also avoid datahang problems that were putting the pod a lagging state where I cannot shut it down or stop it or do anything
-
-# Also if we are using the same source for creating the validation set won't run into a problem of validating on some of the same data we trained on
+# --- NEW CONFIGS SECTION FOR LOGGING ---
+logging_config:
+  # Set to "WARNING" for a quiet run, "INFO" to see setup steps.
+  script_log_level: "ERROR" 
+  # Set this to true ONLY when you need to debug the batch creation process itself.
+  log_collator: false
 
 model_config:
   checkpoint_path: jfkback/hypencoder.6_layer
@@ -34,12 +37,7 @@ data_config:
   num_negatives_to_sample: 7
 # ------------------------------------------------------
     
-  # We need a validation set to find the best checkpoint.
-  # Let's create one from the main training set to monitor for overfitting.
-  # The dataset has a 'validation' split we can use.
-  validation_huggingface_dataset: from_cached_msmarco_train_local.jsonl # to avoid data hang problem
-  validation_data_split: validation
-# ------------------------------------------------------
+
 
 trainer_config:
   hf_trainer_config:
@@ -67,7 +65,6 @@ trainer_config:
     per_device_train_batch_size: 128
     per_device_eval_batch_size: 256 # Can be larger for evaluation
     gradient_accumulation_steps: 2
-    bf16: true
     dataloader_num_workers: 16 # Look into modifying it
     torch_compile: false # look into modifying it
     logging_steps: 200
