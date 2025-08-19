@@ -5,6 +5,29 @@ import torch
 import torch.nn as nn
 
 from hypencoder_cb.modeling.shared import EncoderOutput
+from .q_net import RepeatedDenseBlockConverter
+from .hypencoder import HypencoderDualEncoder # For type hinting
+
+def _truncate_parameters(matrices, vectors, dim_in, dim_hidden, dim_out):
+    """Helper to truncate weights and biases for a specific Matryoshka dimension."""
+    truncated_matrices = []
+
+    # First matrix: (batch, dim_in, full_hidden) -> (batch, dim_in, dim_hidden)
+    truncated_matrices.append(matrices[0][:, :dim_in, :dim_hidden])
+
+    # Intermediate matrices: (batch, full_hidden, full_hidden) -> (batch, dim_hidden, dim_hidden)
+    for i in range(1, len(matrices) - 1):
+        truncated_matrices.append(matrices[i][:, :dim_hidden, :dim_hidden])
+
+    # Final matrix: (batch, full_hidden, dim_out) -> (batch, dim_hidden, dim_out)
+    truncated_matrices.append(matrices[-1][:, :dim_hidden, :dim_out])
+
+    truncated_vectors = []
+    # Bias vectors: (batch, full_hidden, 1) -> (batch, dim_hidden, 1)
+    for i in range(len(vectors)):
+        truncated_vectors.append(vectors[i][:, :dim_hidden, :])
+
+    return truncated_matrices, truncated_vectors
 
 
 def pos_neg_triplets_from_similarity(similarity: torch.Tensor) -> torch.Tensor:
@@ -418,3 +441,81 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
             )
 
         return similarity
+
+
+
+
+class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
+    """
+    Calculates MarginMSE loss across multiple q-net widths (Matryoshka dimensions).
+    """
+    def __init__(self, matryoshka_dims: List[int], q_net_converter: "RepeatedDenseBlockConverter", **kwargs):
+        super().__init__(**kwargs)
+        if not matryoshka_dims:
+            raise ValueError("matryoshka_dims cannot be empty.")
+        # The dimensions to supervise, e.g., [16, 32, 128, 256, 512, 768]
+        self.matryoshka_dims = sorted(matryoshka_dims)
+        # Store the converter's configuration
+        self.original_converter = q_net_converter
+        logging.info(f"Initializing Matryoshka Loss for dimensions: {self.matryoshka_dims}")
+
+    def forward(
+        self,
+        query_output: "HypencoderOutput",
+        passage_output: EncoderOutput,
+        labels: Optional[torch.Tensor] = None,
+        # model: Optional["HypencoderDualEncoder"] = None # Pass the model to access the converter
+    ) -> SimilarityAndLossOutput:
+
+        # Get the full-size generated parameters from the query encoder's output
+        full_matrices = query_output.generated_matrices
+        full_vectors = query_output.generated_vectors
+        item_embeddings = passage_output.representation
+
+        total_loss = torch.tensor(0.0, device=item_embeddings.device)
+
+        # Loop through each specified Matryoshka dimension
+        for dim in self.matryoshka_dims:
+            # 1. Truncate the parameters for the current dimension
+            #    Input dim is fixed (e.g., 768), output is fixed (1)
+            dim_in = item_embeddings.shape[-1]
+            dim_out = 1
+            truncated_matrices, truncated_vectors = _truncate_parameters(full_matrices, full_vectors, dim_in, dim, dim_out)
+
+            # 2. Create a temporary q-net converter for this dimension's architecture
+            #    The architecture is [Input_Dim, Hidden_Dim, ..., Hidden_Dim, Output_Dim]
+            num_hidden_layers = self.original_converter.num_layers - 2
+            matryoshka_layer_dims = [dim_in] + [dim] * (num_hidden_layers + 1) + [dim_out]
+
+            # Create a temporary converter with the same settings as the original
+            temp_converter = RepeatedDenseBlockConverter(
+                vector_dimensions=matryoshka_layer_dims,
+                activation_type=self.original_converter.activation.__class__.__name__.lower(),
+                do_dropout=self.original_converter.do_dropout,
+                dropout_prob=self.original_converter.dropout_prob,
+                do_layer_norm=self.original_converter.do_layer_norm,
+                do_residual=self.original_converter.do_residual,
+                do_residual_on_last=self.original_converter.do_residual_on_last,
+                layer_norm_before_residual=self.original_converter.layer_norm_before_residual,
+            )
+
+            # 3. Build the temporary, smaller q-net
+            q_net_at_dim = temp_converter(truncated_matrices, truncated_vectors, is_training=True)
+
+            # 4. Calculate similarity scores using this smaller q-net
+            #    (Assuming no in-batch negatives for MarginMSE)
+            similarity_at_dim = no_in_batch_negatives_hypecoder_similarity(q_net_at_dim, item_embeddings)
+
+            # 5. Calculate the loss for this dimension
+            triplet_similarity = pos_neg_triplets_from_similarity(similarity_at_dim)
+            loss_at_dim = self._loss(triplet_similarity, labels)
+
+            # 6. Add the weighted loss for this dimension to the total loss
+            #    Weight the loss by the dimension size to balance gradients
+            total_loss += loss_at_dim * (dim / self.matryoshka_dims[-1])
+
+        # For logging purposes, we can return the similarity from the largest q-net
+        full_size_q_net = query_output.representation
+        final_similarity = no_in_batch_negatives_hypecoder_similarity(full_size_q_net, item_embeddings)
+
+        return SimilarityAndLossOutput(similarity=final_similarity, loss=total_loss)
