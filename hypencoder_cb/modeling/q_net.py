@@ -110,7 +110,10 @@ class NoTorchDenseBlock:
             torch.Tensor: Output vectors with the shape:
                 (num_queries, num_items_per_query, output_hidden_size)
         """
-
+        # MATRYOSHKA: change, created copies 
+        y_out = x.clone()
+        y_out = self.linear(y_out)
+        
         if self.do_dropout:
             y = F.dropout(x, self.dropout_prob)
         else:
@@ -124,8 +127,28 @@ class NoTorchDenseBlock:
         if self.do_layer_norm and self.layer_norm_before_residual:
             y = F.layer_norm(y, (y.size(-1),))
 
+        # MATRYOSHKA: change, in this if statement
         if self.do_residual:
-            y = y + x
+            # If shapes are identical, just add.
+            if y_out.shape == x.shape:
+                y_out = y_out + x
+            # If output is smaller than input (e.g., projection 768 -> 64),
+            # pad the output with zeros to match the input shape before adding.
+            elif y_out.shape[-1] < x.shape[-1]:
+                # 1. Create a zero tensor with the same shape and device as the input `x`.
+                y_padded = torch.zeros_like(x)
+                
+                # 2. Get the smaller dimension size.
+                small_dim = y_out.shape[-1]
+                
+                # 3. Copy the contents of the smaller output tensor `y_out` into the
+                #    beginning of the padded tensor.
+                y_padded[..., :small_dim] = y_out
+                
+                # 4. Perform the addition with matching shapes.
+                y_out = y_padded + x
+            # Note: We don't handle the case where y_out > x, as it's not expected
+            # in our Matryoshka architecture.
 
         if self.do_layer_norm and not self.layer_norm_before_residual:
             y = F.layer_norm(y, (y.size(-1),))
