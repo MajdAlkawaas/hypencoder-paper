@@ -1,12 +1,16 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
-
+from typing import Callable, Optional, List
+from typing import TYPE_CHECKING
 import torch
 import torch.nn as nn
-
+import logging
 from hypencoder_cb.modeling.shared import EncoderOutput
 from .q_net import RepeatedDenseBlockConverter
-from .hypencoder import HypencoderDualEncoder # For type hinting
+
+# from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder # For type hinting
+
+if TYPE_CHECKING:
+    from .hypencoder import HypencoderDualEncoder, HypencoderOutput
 
 def _truncate_parameters(matrices, vectors, dim_in, dim_hidden, dim_out):
     """Helper to truncate weights and biases for a specific Matryoshka dimension."""
@@ -462,10 +466,10 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
     def forward(
         self,
         query_output: "HypencoderOutput",
-        passage_output: EncoderOutput,
+        passage_output: "EncoderOutput",
         labels: Optional[torch.Tensor] = None,
         # model: Optional["HypencoderDualEncoder"] = None # Pass the model to access the converter
-    ) -> SimilarityAndLossOutput:
+    ) -> "SimilarityAndLossOutput":
 
         # Get the full-size generated parameters from the query encoder's output
         full_matrices = query_output.generated_matrices

@@ -56,11 +56,16 @@ class BaseDualEncoder(PreTrainedModel):
     config_class = BaseDualEncoderConfig
 
     def __init__(self, config: BaseDualEncoderConfig):
-        super(BaseDualEncoder, self).__init__(config)
-        self._get_similarity_loss(config)
-        self.similarity_loss_forward_kwargs = [
-            {} for _ in range(len(self.similarity_losses))
-        ]
+        super().__init__(config)
+        # super(BaseDualEncoder, self).__init__(config)
+        # self._get_similarity_loss(config)
+        # self.similarity_loss_forward_kwargs = [
+        #     {} for _ in range(len(self.similarity_losses))
+        # ]
+
+        # We will initialize this as an empty list here.
+        self.similarity_losses = []
+        self.similarity_loss_forward_kwargs = []
 
     def _get_similarity_loss(self, config: BaseDualEncoderConfig):
         raise NotImplementedError()

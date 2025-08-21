@@ -17,9 +17,8 @@ from hypencoder_cb.modeling.similarity_and_losses import (
     HypencoderCrossEntropyLoss,
     HypencoderMarginMSELoss,
 )
-
 # MATRYOSHKA: Change, added this import
-from .similarity_and_losses import HypencoderMatryoshkaDimMarginMSELoss
+from hypencoder_cb.modeling.similarity_and_losses import HypencoderMatryoshkaDimMarginMSELoss 
 
 def scaled_dot_product_attention(
     query: torch.Tensor,
@@ -410,7 +409,8 @@ class HypencoderDualEncoder(BaseDualEncoder):
     config_class = HypencoderDualEncoderConfig
 
     def __init__(self, config: HypencoderDualEncoderConfig):
-        super(HypencoderDualEncoder, self).__init__(config)
+        # super(HypencoderDualEncoder, self).__init__(config)
+        super().__init__(config)
 
         # Creates the query encoder (Hypencoder)
         self.query_encoder = Hypencoder(
@@ -425,6 +425,12 @@ class HypencoderDualEncoder(BaseDualEncoder):
         if config.shared_encoder:
             self.passage_encoder.transformer = self.query_encoder.transformer
 
+        # 3. NOW it is safe to call the loss setup method.
+        self._get_similarity_loss(config)
+        self.similarity_loss_forward_kwargs = [
+            {} for _ in range(len(self.similarity_losses))
+        ]
+    
     # instantiates the correct loss class based on the config.
     def _get_similarity_loss(self, config: BaseDualEncoderConfig):
         self.similarity_losses = []
