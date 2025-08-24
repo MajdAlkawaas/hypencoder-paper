@@ -57,7 +57,7 @@ class EncodedItem(BaseDoc):
 # We parameterize NdArray with the exact numpy dtype.
 class EncodedItemFloat16(BaseDoc):
     text: str
-    representation: NdArray[np.float16]
+    representation: NdArray
     id: Optional[str] = None
 
 def items_from_ir_dataset(
@@ -180,10 +180,12 @@ def load_encoded_items_from_disk(
     if target_dtype.lower() in ["float16", "fp16"]:
         # If the user wants float16, use the specific float16 schema.
         schema_to_use = EncodedItemFloat16
+        print(f"HERE: float16")
     else:
         # Otherwise, use the default float32 schema.
         schema_to_use = EncodedItem
-
+        print(f"HERE: float32")
+        
     return DocList[schema_to_use].pull(
         f"file://{encoded_items_path}", show_progress=True
     )
