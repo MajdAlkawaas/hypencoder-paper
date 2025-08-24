@@ -8,8 +8,8 @@ from typing import List
 from pathlib import Path
 
 # Import necessary components from the existing codebase
-from .retrieve import HypencoderRetriever, do_eval_and_pretty_print
-from .shared import load_encoded_items_from_disk, retrieve_for_ir_dataset_queries
+from hypencoder_cb.inference.retrieve import HypencoderRetriever, do_eval_and_pretty_print
+from hypencoder_cb.inference.shared import load_encoded_items_from_disk, retrieve_for_ir_dataset_queries
 
 def evaluate_all_checkpoints(
     training_run_dir: str,
@@ -84,7 +84,7 @@ def evaluate_all_checkpoints(
             ir_dataset_name=ir_dataset_name,
             output_path=retrieval_file,
             top_k=top_k,
-            include_content=False
+            include_content=True
         )
 
         print(f"Retrieval for {checkpoint_name} complete. Evaluating...")
