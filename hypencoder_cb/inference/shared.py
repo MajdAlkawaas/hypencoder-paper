@@ -53,6 +53,12 @@ class EncodedItem(BaseDoc):
     representation: NdArray
     id: Optional[str] = None
 
+# This is a specific schema for float16 embeddings.
+# We parameterize NdArray with the exact numpy dtype.
+class EncodedItemFloat16(BaseDoc):
+    text: str
+    representation: NdArray
+    id: Optional[str] = None
 
 def items_from_ir_dataset(
     ir_dataset_name: str,
@@ -166,8 +172,21 @@ class BaseRetriever:
 
 def load_encoded_items_from_disk(
     encoded_items_path: str,
+    target_dtype: str = "float32" # <-- Added new parameter with a default
 ) -> Iterable[EncodedItem]:
-    return DocList[EncodedItem].pull(
+    print(f"Deserializing corpus with target dtype: {target_dtype}")
+
+    # --- Added DYNAMIC SCHEMA SELECTION ---
+    if target_dtype.lower() in ["float16", "fp16"]:
+        # If the user wants float16, use the specific float16 schema.
+        schema_to_use = EncodedItemFloat16
+        print(f"HERE: float16")
+    else:
+        # Otherwise, use the default float32 schema.
+        schema_to_use = EncodedItem
+        print(f"HERE: float32")
+        
+    return DocList[schema_to_use].pull(
         f"file://{encoded_items_path}", show_progress=True
     )
 
