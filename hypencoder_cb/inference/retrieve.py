@@ -32,13 +32,15 @@ class HypencoderRetriever(BaseRetriever):
 
     def __init__(
         self,
-        model_name_or_path: str,
-        encoded_item_path: str,
+        model_name_or_path: Optional[str] = None,
+        model_for_retrieval: Optional[HypencoderDualEncoder] = None,
+        encoded_item_path: Optional[str] = None,
+        preloaded_encoded_items: Optional[List] = None, # Added new argument
         batch_size: int = 100_000,
         device: str = "cuda",
         dtype: Union[torch.dtype, str] = "float32",
         query_model_kwargs: Optional[Dict] = None,
-        put_all_embeddings_on_device: bool = True,
+        put_all_embeddings_on_device: bool = True, # This will be controlled
         query_max_length: int = 32,
         ignore_same_id: bool = False,
     ) -> None:
@@ -78,22 +80,44 @@ class HypencoderRetriever(BaseRetriever):
         self.ignore_same_id = ignore_same_id
         self.put_on_device = put_all_embeddings_on_device
 
+
         if query_model_kwargs is None:
             query_model_kwargs = {}
 
         self.query_model_kwargs = query_model_kwargs
 
-        self.model = (
-            HypencoderDualEncoder.from_pretrained(model_name_or_path)
-            .to(device, dtype=self.dtype)
-            .eval()
-        )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        # --- MODEL LOADING LOGIC ---
+        if model_for_retrieval is not None:
+            self.model = model_for_retrieval.to(self.device, dtype=self.dtype).eval()
+        elif model_name_or_path is not None:
+            # The existing from_pretrained logic
+            self.model = HypencoderDualEncoder.from_pretrained(model_name_or_path).to(self.device, dtype=self.dtype).eval()
+        else:
+            raise ValueError("Must provide 'model_name_or_path' or 'model_for_retrieval'.")
+            
+        if model_name_or_path:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased") # Fallback        
 
-        print("Started loading encoded items...")
-        encoded_items = load_encoded_items_from_disk(
-            encoded_item_path,
-        )
+        # print("Started loading encoded items...")
+        # encoded_items = load_encoded_items_from_disk(
+        #     encoded_item_path,
+        # )
+
+        # Modified the loading of the encoded data
+        if preloaded_encoded_items is not None:
+            print("INFO: Using pre-loaded encoded items from memory.")
+            encoded_items = preloaded_encoded_items
+        elif encoded_item_path is not None:
+            print("INFO: Loading encoded items from disk...")
+            # We need to pass the dtype here to ensure correct loading
+            # Assuming fp16 if not specified, as that's the context of this problem
+            # The calling script will handle the dtype logic.
+            encoded_items = load_encoded_items_from_disk(encoded_item_path, target_dtype=self.dtype.__str__().split('.')[-1])
+        else:
+            raise ValueError("Must provide either 'encoded_item_path' or 'preloaded_encoded_items'.")
+
 
         self.encoded_item_embeddings = torch.stack(
             [
