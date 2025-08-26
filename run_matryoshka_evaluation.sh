@@ -4,18 +4,20 @@ set -e
 # ==============================================================================
 # --- CONFIGURATION ---
 # ==============================================================================
-TRAINING_RUN_DIR="./matryoshka-hyperhead-run-6-layers"
+TRAINING_RUN_DIR="./matryoshka-hyperhead-run-6-layers-atempt02"
+                      # /encoded_validation_sets/encoded_items/msmarco-passage_trec_dl_2020.docs
 ENCODED_CORPUS_PATH="./encoded_validation_sets/encoded_items/msmarco-passage_trec_dl_2020.docs"
-OUTPUT_DIR="./encoded_validation_sets/retrieved_items/matryoshka/msmarco_passage_trec_dl_2020/checkpoint-15720"
+OUTPUT_DIR="./encoded_validation_sets/retrieved_items/matryoshka_attempt02/msmarco_passage_trec_dl_2020"
 EVAL_DATASET="msmarco-passage/trec-dl-2020"
 
 # The same dimensions you used for training
-MATRYOSHKA_DIMS=(64 128 256 512 768)
+# MATRYOSHKA_DIMS=(128 256 512 768)
+MATRYOSHKA_DIMS=(512 768)
 
 # Hardware and performance settings
-INFERENCE_DTYPE="fp16"
+# INFERENCE_DTYPE="fp16"
 # Set to true if your fp16 corpus + model fits in VRAM
-PUT_EMBEDDINGS_ON_DEVICE="true" 
+# PUT_EMBEDDINGS_ON_DEVICE="true" 
 
 # ==============================================================================
 # --- SCRIPT LOGIC ---
