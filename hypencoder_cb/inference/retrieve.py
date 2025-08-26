@@ -14,6 +14,8 @@ from hypencoder_cb.inference.shared import (
     retrieve_for_ir_dataset_queries,
     retrieve_for_jsonl_queries,
 )
+
+
 from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder
 from hypencoder_cb.utils.data_utils import (
     load_qrels_from_ir_datasets,
@@ -30,10 +32,32 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 class HypencoderRetriever(BaseRetriever):
 
+        # Data source arguments
+        # encoded_item_path: Optional[str] = None,
+        # preloaded_embeddings: Optional[torch.Tensor] = None,
+        # preloaded_ids: Optional[List[str]] = None,
+        # preloaded_texts: Optional[List[str]] = None,
+        # preloaded_encoded_items: Optional[List] = None,
+        
+        # # Model and config arguments
+        # model_name_or_path: str = None,
+        # model_for_retrieval: Optional[HypencoderDualEncoder] = None,
+        # batch_size: int = 100_000,
+        # device: str = "cuda",
+        # dtype: str = "float32",
+        # put_all_embeddings_on_device: bool = True,
+        # query_max_length: int = 32,
+        # ignore_same_id: bool = False,
+    
     def __init__(
         self,
         model_name_or_path: Optional[str] = None,
         model_for_retrieval: Optional[HypencoderDualEncoder] = None,
+
+        preloaded_embeddings: Optional[torch.Tensor] = None,
+        preloaded_ids: Optional[List[str]] = None,
+        preloaded_texts: Optional[List[str]] = None,
+        
         encoded_item_path: Optional[str] = None,
         preloaded_encoded_items: Optional[List] = None, # Added new argument
         batch_size: int = 100_000,
@@ -70,69 +94,84 @@ class HypencoderRetriever(BaseRetriever):
                 certain datasets. Defaults to False.
         """
         if isinstance(dtype, str):
-            dtype = dtype_lookup(dtype)
+            self.dtype = dtype_lookup(dtype)
+        else:
+            self.dtype = dtype
 
-        self.dtype = dtype
+        # self.dtype = dtype
         self.device = device
         self.batch_size = batch_size
         self.encoded_item_path = encoded_item_path
         self.query_max_length = query_max_length
         self.ignore_same_id = ignore_same_id
         self.put_on_device = put_all_embeddings_on_device
-
-
+        
         if query_model_kwargs is None:
             query_model_kwargs = {}
 
         self.query_model_kwargs = query_model_kwargs
 
-        # --- MODEL LOADING LOGIC ---
+        # --- REFACTORED INITIALIZATION ---
+
+        # 1. Load the model and tokenizer
+        self._load_model_and_tokenizer(model_name_or_path, model_for_retrieval)
+
+        # 2. Load and process the document corpus
+        self._load_and_process_data(
+            encoded_item_path=encoded_item_path,
+            preloaded_embeddings=preloaded_embeddings,
+            preloaded_ids=preloaded_ids,
+            preloaded_texts=preloaded_texts,
+            preloaded_encoded_items=preloaded_encoded_items
+        )
+
+        # 3. Move embeddings to GPU if requested
+        if self.put_on_device and self.encoded_item_embeddings is not None:
+            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
+
+    def _load_model_and_tokenizer(self, model_name_or_path, model_for_retrieval):
+        """Helper to load the model from one of two sources."""
         if model_for_retrieval is not None:
             self.model = model_for_retrieval.to(self.device, dtype=self.dtype).eval()
         elif model_name_or_path is not None:
-            # The existing from_pretrained logic
             self.model = HypencoderDualEncoder.from_pretrained(model_name_or_path).to(self.device, dtype=self.dtype).eval()
         else:
             raise ValueError("Must provide 'model_name_or_path' or 'model_for_retrieval'.")
-            
+        
+        # Tokenizer is always loaded from path for consistency
         if model_name_or_path:
             self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        else: # Fallback for safety, though should not be needed
+            self.tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+
+    def _load_and_process_data(self, **kwargs):
+        """Helper to load data from one of the provided sources."""
+        if kwargs.get('preloaded_embeddings') is not None:
+            print("INFO: Using pre-processed tensors and lists from memory.")
+            self.encoded_item_embeddings = kwargs['preloaded_embeddings']
+            self.encoded_item_ids = kwargs['preloaded_ids']
+            self.encoded_item_texts = kwargs['preloaded_texts']
+        elif kwargs.get('preloaded_encoded_items') is not None:
+            print("INFO: Processing pre-loaded raw items list...")
+            self._process_encoded_items(kwargs['preloaded_encoded_items'])
+        elif kwargs.get('encoded_item_path') is not None:
+            print(f"INFO: Loading and processing from disk: {kwargs['encoded_item_path']}")
+            # dtype_str = "fp16" if self.dtype == torch.float16 else "float32"
+            dtype_str = "float32"
+            encoded_items = load_encoded_items_from_disk(kwargs['encoded_item_path'], target_dtype=dtype_str)
+            self._process_encoded_items(encoded_items)
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased") # Fallback        
+            raise ValueError("No data source provided.")
 
-        # print("Started loading encoded items...")
-        # encoded_items = load_encoded_items_from_disk(
-        #     encoded_item_path,
-        # )
-
-        # Modified the loading of the encoded data
-        if preloaded_encoded_items is not None:
-            print("INFO: Using pre-loaded encoded items from memory.")
-            encoded_items = preloaded_encoded_items
-        elif encoded_item_path is not None:
-            print("INFO: Loading encoded items from disk...")
-            # We need to pass the dtype here to ensure correct loading
-            # Assuming fp16 if not specified, as that's the context of this problem
-            # The calling script will handle the dtype logic.
-            encoded_items = load_encoded_items_from_disk(encoded_item_path, target_dtype=self.dtype.__str__().split('.')[-1])
-        else:
-            raise ValueError("Must provide either 'encoded_item_path' or 'preloaded_encoded_items'.")
-
-
+    def _process_encoded_items(self, encoded_items: List):
+        """Helper for the expensive processing of a raw item list."""
+        print("INFO: Stacking item representations into a single torch.Tensor...")
         self.encoded_item_embeddings = torch.stack(
-            [
-                torch.tensor(x.representation, dtype=self.dtype)
-                for x in tqdm(encoded_items)
-            ]
+            [torch.tensor(x.representation, dtype=self.dtype) for x in tqdm(encoded_items, desc="Stacking Embeddings")]
         )
-
-        if self.put_on_device:
-            self.encoded_item_embeddings = self.encoded_item_embeddings.to(
-                self.device
-            )
-
-        self.encoded_item_ids = [x.id for x in tqdm(encoded_items)]
-        self.encoded_item_texts = [x.text for x in tqdm(encoded_items)]
+        print("INFO: Extracting item IDs and texts...")
+        self.encoded_item_ids = [x.id for x in tqdm(encoded_items, desc="Encoded item ids")]
+        self.encoded_item_texts = [x.text for x in tqdm(encoded_items, desc="Encoded item texts")]
 
     def retrieve(self, query: TextQuery, top_k: int) -> List[Item]:
         tokenized_query = self.tokenizer(
