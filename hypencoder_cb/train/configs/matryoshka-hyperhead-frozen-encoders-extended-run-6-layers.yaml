@@ -1,7 +1,7 @@
 # --- NEW CONFIGS SECTION FOR LOGGING ---
 logging_config:
   # Set to "WARNING" for a quiet run, "INFO" to see setup steps.
-  script_log_level: "ERROR" 
+  script_log_level: "INFO" 
   # Set this to true ONLY when you need to debug the batch creation process itself.
   log_collator: false
 
@@ -44,13 +44,14 @@ data_config:
 trainer_config:
   hf_trainer_config:
 
-    output_dir: ./matryoshka-hyperhead-run-6-layers
+    # output_dir: ./trashy
+    output_dir: ./matryoshka-hyperhead-run-6-layers-atempt02
     overwrite_output_dir: true
 
     # --- KEY CHANGES FOR THIS EXPERIMENT ---
 
     # 1. Train for much longer.
-    num_train_epochs: 8
+    num_train_epochs: 15
 
     # 2. Use a more effective learning rate schedule for from-scratch training.
     learning_rate: 5e-5 # This is still a good starting point
@@ -62,9 +63,9 @@ trainer_config:
     save_total_limit: 10         # Keep the last 10 checkpoints + the best one
     
     # --- Other performance settings ---
-    per_device_train_batch_size: 128
+    per_device_train_batch_size: 256
     gradient_accumulation_steps: 2
-    dataloader_num_workers: 4 # Look into modifying it
+    dataloader_num_workers: 8 # Look into modifying it
     logging_steps: 400
     bf16: true
     fp16: false 
