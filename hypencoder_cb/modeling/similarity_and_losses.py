@@ -476,8 +476,12 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
         full_vectors = query_output.generated_vectors
         item_embeddings = passage_output.representation
 
-        total_loss = torch.tensor(0.0, device=item_embeddings.device)
+        if full_matrices is None or full_vectors is None:
+            raise ValueError("Matryoshka loss requires 'generated_matrices' and 'generated_vectors'.")
 
+
+        total_loss = torch.tensor(0.0, device=item_embeddings.device)
+        num_dims_supervised = len(self.matryoshka_dims)
         # Loop through each specified Matryoshka dimension
         for dim in self.matryoshka_dims:
             # 1. Truncate the parameters for the current dimension
@@ -514,12 +518,21 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
             triplet_similarity = pos_neg_triplets_from_similarity(similarity_at_dim)
             loss_at_dim = self._loss(triplet_similarity, labels)
 
+            # CHANGE: I have commented out this line
             # 6. Add the weighted loss for this dimension to the total loss
             #    Weight the loss by the dimension size to balance gradients
-            total_loss += loss_at_dim * (dim / self.matryoshka_dims[-1])
+            # total_loss += loss_at_dim * (dim / self.matryoshka_dims[-1])
+
+            # CHANGE: Modified the loss calculation by removing the loss weighting
+            total_loss += loss_at_dim
+        
+        # CHANGE: Calculating the loss average over the several matryoshka dims
+        average_loss = total_loss / num_dims_supervised
+
 
         # For logging purposes, we can return the similarity from the largest q-net
         full_size_q_net = query_output.representation
-        final_similarity = no_in_batch_negatives_hypecoder_similarity(full_size_q_net, item_embeddings)
 
-        return SimilarityAndLossOutput(similarity=final_similarity, loss=total_loss)
+        final_similarity = no_in_batch_negatives_hypecoder_similarity(full_size_q_net, item_embeddings)
+        # CHANGE: Passing the average loss instead of the total loss
+        return SimilarityAndLossOutput(similarity=final_similarity, loss=average_loss)
