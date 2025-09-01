@@ -163,7 +163,13 @@ class HypencoderRetriever(BaseRetriever):
         # Step 1: Load your locally trained model.
         # This works because your local checkpoint has a complete config.json
         print(f"Step 1: Loading your local checkpoint: {LOCAL_CHECKPOINT_PATH}")
-        local_model = HypencoderDualEncoder.from_pretrained(LOCAL_CHECKPOINT_PATH)
+        local_model_config = HypencoderDualEncoderConfig.from_pretrained(LOCAL_CHECKPOINT_PATH)
+        if "matryoshka_dim_margin_mse" in local_model_config.loss_type:
+            print("WARNING: Detected Matryoshka loss type in config. Overriding for standard retrieval.")
+            # Replace it with a loss type that the standard code recognizes.
+            local_model_config.loss_type = ["margin_mse"]
+            local_model_config.loss_kwargs = [{}]
+        local_model = HypencoderDualEncoder.from_pretrained(LOCAL_CHECKPOINT_PATH, config=local_model_config)
         
         # Step 2: Load the original public model.
         print(f"Step 2: Loading the original public model: {ORIGINAL_MODEL_NAME}")
