@@ -26,7 +26,7 @@ model_config:
     # MATRYOSHKA: define the loss type
     - matryoshka_dim_margin_mse
   loss_kwargs:
-    - matryoshka_dims: [64, 128, 256, 512, 768]
+    - matryoshka_dims: [32, 64, 128, 256, 512, 768]
 
 
 data_config:
@@ -45,7 +45,7 @@ trainer_config:
   hf_trainer_config:
 
     # output_dir: ./trashy
-    output_dir: ./matryoshka-hyperhead-run-6-layers-atempt02
+    output_dir: ./trained_models/matryoshka-hyperhead-run-6-layers-dims01
     overwrite_output_dir: true
 
     # --- KEY CHANGES FOR THIS EXPERIMENT ---
@@ -66,6 +66,14 @@ trainer_config:
     per_device_train_batch_size: 256
     gradient_accumulation_steps: 2
     dataloader_num_workers: 8 # Look into modifying it
-    logging_steps: 400
+    logging_steps: 200
     bf16: true
     fp16: false 
+    # --- W&B INTEGRATION ---
+
+    # 1. This is the master switch. It tells the Trainer to send all logs to W&B.
+    report_to: "wandb"
+
+    # 2. This gives your experiment a human-readable name in the W&B dashboard.
+    #    It's crucial for telling your runs apart.
+    run_name: "matryoshka-hyperhead-frozen-encoders-run-6-layers-dims01"
