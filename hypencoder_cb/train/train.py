@@ -359,15 +359,15 @@ def train_model(cfg: HypencoderTrainingConfig):
     # --- FLAG ---
     print("FLAG: [train_model] Training complete.")
 
-    logger.info("\n--- STAGE: Saving Final Model ---")
-    final_output_dir = training_args.output_dir
-    logger.info(f"FLAG: [train_model] Explicitly saving model to: {final_output_dir}")
-    os.mkdir("./trained_models/extended_6_layers_frozen")
-    trainer.save_model("./trained_models/extended_6_layers_frozen")
-    tokenizer.save_pretrained("./trained_models/extended_6_layers_frozen")  
-    trainer.save_model(final_output_dir)
-    tokenizer.save_pretrained(final_output_dir)
-    logger.info("FLAG: [train_model] Final model and tokenizer saved successfully.")
+    # logger.info("\n--- STAGE: Saving Final Model ---")
+    # final_output_dir = training_args.output_dir
+    # logger.info(f"FLAG: [train_model] Explicitly saving model to: {final_output_dir}")
+    # os.mkdir("./trained_models/extended_6_layers_frozen")
+    # trainer.save_model("./trained_models/extended_6_layers_frozen")
+    # tokenizer.save_pretrained("./trained_models/extended_6_layers_frozen")  
+    # trainer.save_model(final_output_dir)
+    # tokenizer.save_pretrained(final_output_dir)
+    # logger.info("FLAG: [train_model] Final model and tokenizer saved successfully.")
 
 
     # -------------------------------------
