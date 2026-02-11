@@ -10,16 +10,19 @@ set -e
 # ==============================================================================
 
 # 1. Path to the directory containing your completed Matryoshka training run.
-TRAINING_RUN_DIR="./trained_models/matryoshka-hyperhead-run-6-layers-atempt06"
+TRAINING_RUN_DIR="./trained_models/matryoshka-hyperhead-run-6-layers-full-dims"
 
 # 2. The base directory where all evaluation results will be saved.
-BASE_OUTPUT_DIR="./encoded_validation_sets/retrieved_items/matryoshka/matryoshka_attempt06"
+BASE_OUTPUT_DIR="./encoded_validation_sets/retrieved_items/matryoshka/matryoshka_full_dims"
 
 # 3. Define the datasets to evaluate on.
 #    KEY: ir_datasets name (in quotes). Use the '/judged' version for TREC DL.
 #    VALUE: Path to the corresponding pre-encoded corpus (in quotes).
 declare -A DATASETS_TO_EVALUATE
 DATASETS_TO_EVALUATE=(
+    ["msmarco-passage/dev/small"]="./encoded_validation_sets/encoded_items/msmarco_dev_small.docs"
+    ["msmarco-passage/trec-dl-2019"]="./encoded_validation_sets/encoded_items/msmarco-passage_trec_dl_2019.docs"
+    ["msmarco-passage/trec-dl-2020"]="./encoded_validation_sets/encoded_items/msmarco-passage_trec_dl_2020.docs"
     ["beir/fiqa/test"]="./encoded_validation_sets/encoded_items/beir_fiqa_test.docs"
     ["beir/nfcorpus/test"]="./encoded_validation_sets/encoded_items/beir_nfcorpus_test.docs"
     ["beir/trec-covid"]="./encoded_validation_sets/encoded_items/beir_trec_covid.docs"
@@ -31,7 +34,7 @@ DATASETS_TO_EVALUATE=(
 
 
 # 4. The Matryoshka dimensions you want to test.
-MATRYOSHKA_DIMS=(128 256 512 768)
+MATRYOSHKA_DIMS=(16 32 64 128 256 512 768)
 
 # 5. Hardware and performance settings.
 # INFERENCE_DTYPE="fp16"
