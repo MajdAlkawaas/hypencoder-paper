@@ -180,5 +180,6 @@ debug_run_output_6_layers/
 trained_models/
 
 # Temp ignore
+*.yml
 *.yaml
 *.sh
