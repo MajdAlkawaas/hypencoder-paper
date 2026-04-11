@@ -178,3 +178,7 @@ from_cached_msmarco_train_local.jsonl
 # Model checkpoints folders
 debug_run_output_6_layers/
 trained_models/
+
+# Temp ignore
+*.yml
+*.sh
