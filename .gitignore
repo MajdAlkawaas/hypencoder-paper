@@ -178,3 +178,23 @@ from_cached_msmarco_train_local.jsonl
 # Model checkpoints folders
 debug_run_output_6_layers/
 trained_models/
+
+
+# datasets
+*.docs
+
+# PyTerrier index files
+*.fsomapfile
+*.fsomaphash
+*.fsarrayfile
+*.fsomapid
+*.bf
+*.idx
+*.zdata
+*.properties
+
+
+# Temp ignore
+*.yml
+*.yaml
+*.sh
