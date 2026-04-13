@@ -295,7 +295,8 @@ def evaluate_matryoshka_checkpoints(
             checkpoint_name = Path(checkpoint_path).name
             output_dir_for_dim = Path(base_output_dir) / Path(checkpoint_path).name / f"dim_{dim}"
             output_dir_for_dim.mkdir(parents=True, exist_ok=True)
-            
+            time_dir = output_dir_for_dim / "time"
+            time_dir.mkdir(parents=True, exist_ok=True)
             # This initialization is now extremely fast. It does no I/O.
             retriever = MatryoshkaHypencoderRetriever(
                 matryoshka_dim=dim,
@@ -316,7 +317,9 @@ def evaluate_matryoshka_checkpoints(
                 retriever=retriever, 
                 ir_dataset_name=ir_dataset_name, 
                 output_path=retrieval_file, 
-                top_k=top_k
+                top_k=top_k,
+                track_time=True,
+                track_time_file=time_dir / "retrieval_time.json",
             )
             do_eval_and_pretty_print(
                 retrieval_path=retrieval_file, 
