@@ -275,11 +275,14 @@ def retrieve_items(
         )
 
         if track_time_file is not None:
+            print(f"Saving retrieval time metrics to {track_time_file}")
             with open(track_time_file, "w") as f:
                 json.dump(
                     {
                         "num_queries": num_queries,
                         "time": end_time - start_time,
+                        "queries_per_second": num_queries / (end_time - start_time),
+                        "average_time_per_query": (end_time - start_time) / num_queries,
                     },
                     f,
                 )
@@ -298,7 +301,7 @@ def retrieve_for_ir_dataset_queries(
     track_time_file: Optional[str] = None,
 ) -> None:
     import ir_datasets
-
+    print(f"retrieve_for_ir_dataset_queries: saving time in {track_time_file}")
     dataset = ir_datasets.load(ir_dataset_name)
 
     if skip_queries is None:
