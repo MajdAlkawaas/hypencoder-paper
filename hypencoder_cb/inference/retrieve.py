@@ -324,7 +324,8 @@ def do_retrieval_shared(
 
     retrieval_file = output_dir / "retrieved_items.jsonl"
     metric_dir = output_dir / "metrics"
-
+    time_dire = output_dir / "time"
+    time_dire.mkdir(parents=True, exist_ok=True)
     retriever = retriever_cls(
         **retriever_kwargs
     )
@@ -349,6 +350,7 @@ def do_retrieval_shared(
             include_content=include_content,
             include_type=include_content,
             track_time=True,
+            track_time_file=time_dire/"time.json"
         )
 
     if do_eval:
