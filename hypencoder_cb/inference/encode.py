@@ -8,7 +8,7 @@ from hypencoder_cb.inference.shared import (
     BaseEncoder,
     encode_ir_dataset_items_to_disk,
     encode_jsonl_items_to_disk,
-    VectorEncodedRepresentation
+    VectorEncodedRepresentation,
 )
 from hypencoder_cb.modeling.hypencoder import (
     HypencoderDualEncoder,
@@ -132,9 +132,7 @@ def do_encoding(
     """
 
     if jsonl_path is not None and ir_dataset_name is not None:
-        raise ValueError(
-            "Only one of jsonl_path and ir_dataset_name can be provided."
-        )
+        raise ValueError("Only one of jsonl_path and ir_dataset_name can be provided.")
 
     encoder = InferenceTextEncoder(
         model_name_or_path=model_name_or_path,

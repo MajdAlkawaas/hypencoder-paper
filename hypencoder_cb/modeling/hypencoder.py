@@ -146,10 +146,7 @@ class Hypencoder(PreTrainedModel):
         )
 
         self.weight_hyper_projection = nn.ParameterList(
-            [
-                nn.Linear(in_dim, in_dim)
-                for in_dim, out_dim in self.weight_shapes
-            ]
+            [nn.Linear(in_dim, in_dim) for in_dim, out_dim in self.weight_shapes]
         )
 
         self.bias_hyper_projection = nn.ParameterList(
@@ -172,12 +169,8 @@ class Hypencoder(PreTrainedModel):
 
         with torch.no_grad():
             for i in range(len(self.weight_shapes)):
-                nn.init.normal_(
-                    self.hyper_base_matrices[i].data, std=(2 / 768) ** 0.5
-                )
-                nn.init.normal_(
-                    self.weight_query_embeddings[i].data, mean=0, std=10
-                )
+                nn.init.normal_(self.hyper_base_matrices[i].data, std=(2 / 768) ** 0.5)
+                nn.init.normal_(self.weight_query_embeddings[i].data, mean=0, std=10)
                 nn.init.normal_(
                     self.weight_hyper_projection[i].weight, std=(1 / (768**2))
                 )
@@ -190,9 +183,7 @@ class Hypencoder(PreTrainedModel):
 
             for i in range(len(self.bias_shapes)):
                 nn.init.zeros_(self.hyper_base_vectors[i].data)
-                nn.init.normal_(
-                    self.bias_query_embeddings[i].data, mean=0, std=10
-                )
+                nn.init.normal_(self.bias_query_embeddings[i].data, mean=0, std=10)
 
     def _get_weights_and_biases(
         self, last_hidden_state: torch.Tensor, attention_mask: torch.Tensor
@@ -217,8 +208,7 @@ class Hypencoder(PreTrainedModel):
 
         # Shape (num_hyper_layers, batch_size, max_seq_size, hidden_size)
         keys = [
-            key_projection(last_hidden_state)
-            for key_projection in self.key_projections
+            key_projection(last_hidden_state) for key_projection in self.key_projections
         ]
         values = [
             value_projection(last_hidden_state)
@@ -277,16 +267,14 @@ class Hypencoder(PreTrainedModel):
 
         weights_final = [
             (
-                weights_final[i]
-                + self.hyper_base_matrices[i].repeat(batch_size, 1, 1)
+                weights_final[i] + self.hyper_base_matrices[i].repeat(batch_size, 1, 1)
             ).transpose(2, 1)
             for i in range(len(self.weight_shapes))
         ]
 
         biases_final = [
             (
-                biases_final[i]
-                + self.hyper_base_vectors[i].repeat(batch_size, 1, 1)
+                biases_final[i] + self.hyper_base_vectors[i].repeat(batch_size, 1, 1)
             ).transpose(2, 1)
             for i in range(len(self.bias_shapes))
         ]
@@ -296,9 +284,7 @@ class Hypencoder(PreTrainedModel):
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
         # Get the contextual token representations from the transformer
         # (e.g. bert-base-uncased)
-        output = self.transformer(
-            input_ids=input_ids, attention_mask=attention_mask
-        )
+        output = self.transformer(input_ids=input_ids, attention_mask=attention_mask)
 
         # Shape (bs, seq_len, hidden_size)
         last_hidden_state = output.last_hidden_state
@@ -322,9 +308,9 @@ class Hypencoder(PreTrainedModel):
         # handles the optional embedding_representation if requested.
         if self.config.embedding_representation is not None:
             if self.config.embedding_representation == "mean":
-                output.embedding_representation = last_hidden_state.sum(
-                    dim=1
-                ) / (attention_mask.sum(dim=1, keepdim=True))
+                output.embedding_representation = last_hidden_state.sum(dim=1) / (
+                    attention_mask.sum(dim=1, keepdim=True)
+                )
             elif self.config.embedding_representation == "cls":
                 output.embedding_representation = last_hidden_state[:, 0]
             else:
@@ -367,19 +353,16 @@ class TextEncoder(PreTrainedModel):
             self.pool = self.mean_pool
         elif self.pooling_type == "cls":
             self.pool = self.cls_pool
+
     # Mean pooling of the hidden states of all non-padding tokens
     def mean_pool(self, last_hidden_state, attention_mask):
-        return last_hidden_state.sum(dim=1) / attention_mask.sum(
-            dim=1, keepdim=True
-        )
+        return last_hidden_state.sum(dim=1) / attention_mask.sum(dim=1, keepdim=True)
 
     def cls_pool(self, last_hidden_state, attention_mask):
         return last_hidden_state[:, 0]
 
     def forward(self, input_ids, attention_mask):
-        output = self.transformer(
-            input_ids=input_ids, attention_mask=attention_mask
-        )
+        output = self.transformer(input_ids=input_ids, attention_mask=attention_mask)
 
         pooled_output = self.pool(output.last_hidden_state, attention_mask)
 
@@ -403,9 +386,7 @@ class HypencoderDualEncoder(BaseDualEncoder):
         super(HypencoderDualEncoder, self).__init__(config)
 
         # Creates the query encoder (Hypencoder)
-        self.query_encoder = Hypencoder(
-            HypencoderConfig(**config.query_encoder_kwargs)
-        )
+        self.query_encoder = Hypencoder(HypencoderConfig(**config.query_encoder_kwargs))
 
         # Creates the passage encoder (TextEncoder)
         self.passage_encoder = TextEncoder(
@@ -419,17 +400,11 @@ class HypencoderDualEncoder(BaseDualEncoder):
     def _get_similarity_loss(self, config: BaseDualEncoderConfig):
         self.similarity_losses = []
 
-        for loss_type, loss_kwargs in zip(
-            config.loss_type, config.loss_kwargs
-        ):
+        for loss_type, loss_kwargs in zip(config.loss_type, config.loss_kwargs):
             if loss_type == "margin_mse":
-                self.similarity_losses.append(
-                    HypencoderMarginMSELoss(**loss_kwargs)
-                )
+                self.similarity_losses.append(HypencoderMarginMSELoss(**loss_kwargs))
             elif loss_type == "cross_entropy":
-                self.similarity_losses.append(
-                    HypencoderCrossEntropyLoss(**loss_kwargs)
-                )
+                self.similarity_losses.append(HypencoderCrossEntropyLoss(**loss_kwargs))
             else:
                 raise ValueError(f"Unknown loss type: {loss_type}")
 

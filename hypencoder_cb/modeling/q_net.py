@@ -5,7 +5,6 @@ import torch.nn.functional as F
 
 
 class NoTorchSequential:
-
     def __init__(
         self,
         layers,
@@ -191,13 +190,10 @@ class RepeatedDenseBlockConverter:
 
         self.weight_shapes = []
         for i in range(1, len(vector_dimensions)):
-            self.weight_shapes.append(
-                (vector_dimensions[i - 1], vector_dimensions[i])
-            )
+            self.weight_shapes.append((vector_dimensions[i - 1], vector_dimensions[i]))
 
         self.bias_shapes = [
-            (vector_dimensions[i], 1)
-            for i in range(1, len(vector_dimensions) - 1)
+            (vector_dimensions[i], 1) for i in range(1, len(vector_dimensions) - 1)
         ]
 
         self.num_layers = len(self.weight_shapes)

@@ -39,13 +39,13 @@ def pos_neg_triplets_from_similarity(similarity: torch.Tensor) -> torch.Tensor:
     # positive score N times. N is the number of negative items per query.
     output[:, 0] = positives.repeat_interleave(num_negatives_per_query)
 
-    # Filling the second column with the negative scores by placing the 
+    # Filling the second column with the negative scores by placing the
     # scores of the query's negative items next to the repeated positive
     # score of this query.
     for i in range(num_queries):
-        output[
-            i * num_negatives_per_query : (i + 1) * num_negatives_per_query, 1
-        ] = similarity[i, 1:]
+        output[i * num_negatives_per_query : (i + 1) * num_negatives_per_query, 1] = (
+            similarity[i, 1:]
+        )
 
     return output
 
@@ -77,7 +77,7 @@ def no_in_batch_negatives_hypecoder_similarity(
     num_items, item_emb_dim = item_embeddings.shape
     num_queries = query_models.num_queries
 
-    # Validates that the number of items/documents is multiple of the 
+    # Validates that the number of items/documents is multiple of the
     # number of queries.
     assert num_items % num_queries == 0
 
@@ -87,7 +87,7 @@ def no_in_batch_negatives_hypecoder_similarity(
         assert num_items_per_query == required_num_items_per_query
 
     # Reshape the item embeddings into a structured batch, where each
-    # row corresponds to a query. 
+    # row corresponds to a query.
     item_embeddings = item_embeddings.view(
         num_queries, num_items_per_query, item_emb_dim
     )
@@ -131,13 +131,11 @@ def in_batch_negatives_hypecoder_similarity(
     # (num_queries, num_items, item_emb_dim)
     item_embeddings = item_embeddings.unsqueeze(0).repeat(num_queries, 1, 1)
 
-    # Passes the expanded tensor to the q-net. 
-    # The q-net is batched by num_queries. 
+    # Passes the expanded tensor to the q-net.
+    # The q-net is batched by num_queries.
     # The q-net applies the query-specific scoring function to each
     # item/document in the batch
-    similarity = (
-        query_models(item_embeddings).view(num_queries, num_items).squeeze()
-    )
+    similarity = query_models(item_embeddings).view(num_queries, num_items).squeeze()
 
     return similarity
 
@@ -185,7 +183,7 @@ class SimilarityAndLossBase(nn.Module):
         labels: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> SimilarityAndLossOutput:
-        
+
         similarity = self._get_similarity(query_output, passage_output, **kwargs)
 
         loss = self.scale * self._loss(similarity, labels, **kwargs)
@@ -233,8 +231,8 @@ class MarginMSELoss(SimilarityAndLossBase):
         assert num_similarity_queries == num_label_queries
 
         # --- THESE ARE THE LINES TO REMOVE ---
-        # normalization_fn() method does not exit anywhere in this 
-        # codebase or in pytorch or huggingface 
+        # normalization_fn() method does not exit anywhere in this
+        # codebase or in pytorch or huggingface
         # similarity = self.normalization_fn(similarity)
         # labels = self.normalization_fn(labels)
         # -------------------------------------
@@ -243,19 +241,17 @@ class MarginMSELoss(SimilarityAndLossBase):
         # Calculating the margin score from teacher model
         teacher_margin = labels[:, 0] - labels[:, 1]
 
-        # Calculates the MSE between the student's margin score and 
+        # Calculates the MSE between the student's margin score and
         # the teacher margin score
         return self.loss(margin.squeeze(), teacher_margin.squeeze())
 
 
 class CrossEntropyLoss(SimilarityAndLossBase):
-
     # Generic implementation of a contrastive, cross-entropy-based loss.
     def __init__(
         self,
         use_in_batch_negatives: bool = True,
         only_use_first_item: bool = False,
-        
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -285,7 +281,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
         device: torch.device,
     ) -> torch.Tensor:
         num_items_per_query = num_items // num_queries
-        
+
         if self.use_in_batch_negatives:
             # the correct "class" for query i is the positive document
             # at index i * items_per_query
@@ -306,7 +302,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
 
         return targets
 
-    # Overrides the parent class implementation because it needs to 
+    # Overrides the parent class implementation because it needs to
     # create its target labels
     def forward(
         self,
@@ -315,9 +311,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
         labels: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> SimilarityAndLossOutput:
-        similarity = self._get_similarity(
-            query_output, passage_output, **kwargs
-        )
+        similarity = self._get_similarity(query_output, passage_output, **kwargs)
 
         target = self._get_target(
             similarity.size(0), similarity.size(1), device=similarity.device
@@ -331,7 +325,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
 class HypencoderMarginMSELoss(MarginMSELoss):
     # This inherits the loss calculation logic from the parent class
     # and provide its implementation of the _get_similarity method
-    
+
     def _get_similarity(
         self,
         query_output: EncoderOutput,
@@ -339,7 +333,6 @@ class HypencoderMarginMSELoss(MarginMSELoss):
         **kwargs,
     ) -> torch.Tensor:
         # The class's implementation of _get_similarity().
-
 
         # It passes the callable q-net and the doc embeddings to the
         # bellow method
@@ -372,13 +365,10 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
     def __init__(
         self,
         use_query_embedding_representation: bool = False,
-
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.use_query_embedding_representation = (
-            use_query_embedding_representation
-        )
+        self.use_query_embedding_representation = use_query_embedding_representation
 
     def _get_similarity(
         self,

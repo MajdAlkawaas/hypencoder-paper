@@ -8,8 +8,6 @@ from transformers import AutoTokenizer
 
 # Added these imports
 # from ..modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
-from transformers import AutoConfig
-from collections import OrderedDict
 
 from hypencoder_cb.utils.model_utils import load_hypencoder_model
 
@@ -21,7 +19,6 @@ from hypencoder_cb.inference.shared import (
     retrieve_for_ir_dataset_queries,
     retrieve_for_jsonl_queries,
 )
-from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
 from hypencoder_cb.utils.data_utils import (
     load_qrels_from_ir_datasets,
     load_qrels_from_json,
@@ -36,7 +33,6 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
 class HypencoderRetriever(BaseRetriever):
-
     def __init__(
         self,
         model_name_or_path: str,
@@ -90,7 +86,6 @@ class HypencoderRetriever(BaseRetriever):
 
         self.query_model_kwargs = query_model_kwargs
 
-
         # --- REPLACED LOGIC ---
         # Replace the entire complex surgical loading block with a single call
         # to our new, unified utility function.
@@ -100,7 +95,6 @@ class HypencoderRetriever(BaseRetriever):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
-        
         print("Started loading encoded items...")
         encoded_items = load_encoded_items_from_disk(
             encoded_item_path,
@@ -114,9 +108,7 @@ class HypencoderRetriever(BaseRetriever):
         )
 
         if self.put_on_device:
-            self.encoded_item_embeddings = self.encoded_item_embeddings.to(
-                self.device
-            )
+            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
 
         self.encoded_item_ids = [x.id for x in tqdm(encoded_items)]
         self.encoded_item_texts = [x.text for x in tqdm(encoded_items)]
@@ -138,9 +130,7 @@ class HypencoderRetriever(BaseRetriever):
 
         query_model = query_output.representation
 
-        num_batches = (
-            len(self.encoded_item_embeddings) // self.batch_size
-        ) + 1
+        num_batches = (len(self.encoded_item_embeddings) // self.batch_size) + 1
 
         top_k_indices = torch.full((top_k * num_batches,), -1)
         top_k_scores = torch.full((top_k * num_batches,), -float("inf"))
@@ -161,22 +151,17 @@ class HypencoderRetriever(BaseRetriever):
             indices = indices.squeeze(0).cpu()
             values = values.squeeze(0).cpu()
 
-            top_k_indices[batch_index * top_k : (batch_index + 1) * top_k] = (
-                indices + (batch_index * self.batch_size)
+            top_k_indices[batch_index * top_k : (batch_index + 1) * top_k] = indices + (
+                batch_index * self.batch_size
             )
-            top_k_scores[batch_index * top_k : (batch_index + 1) * top_k] = (
-                values
-            )
+            top_k_scores[batch_index * top_k : (batch_index + 1) * top_k] = values
 
         final_values, indices = torch.topk(top_k_scores, top_k, dim=0)
         final_indices = top_k_indices[indices]
 
         items = []
         for item_idx, score in zip(final_indices, final_values):
-            if (
-                self.ignore_same_id
-                and query.id == self.encoded_item_ids[item_idx]
-            ):
+            if self.ignore_same_id and query.id == self.encoded_item_ids[item_idx]:
                 continue
 
             items.append(
@@ -220,14 +205,10 @@ def do_eval_and_pretty_print(
     """
 
     if ir_dataset_name is None and qrel_json is None:
-        raise ValueError(
-            "One of ir_dataset_name or qrel_json must be provided."
-        )
+        raise ValueError("One of ir_dataset_name or qrel_json must be provided.")
 
     if ir_dataset_name is not None and qrel_json is not None:
-        raise ValueError(
-            "Only one of ir_dataset_name or qrel_json can be provided."
-        )
+        raise ValueError("Only one of ir_dataset_name or qrel_json can be provided.")
 
     if qrel_json is not None:
         qrels = load_qrels_from_json(qrel_json)
@@ -237,9 +218,7 @@ def do_eval_and_pretty_print(
     retrieval_path = Path(retrieval_path)
     retrieval_pretty_path = retrieval_path.with_suffix(".txt")
 
-    pretty_print_standard_format(
-        retrieval_path, output_file=retrieval_pretty_path
-    )
+    pretty_print_standard_format(retrieval_path, output_file=retrieval_pretty_path)
     run = load_standard_format_as_run(retrieval_path, score_key="score")
 
     calculate_metrics_to_file(
@@ -304,9 +283,7 @@ def do_retrieval_shared(
     """
 
     if query_jsonl is not None and ir_dataset_name is not None:
-        raise ValueError(
-            "Only one of query_jsonl and ir_dataset_name can be provided."
-        )
+        raise ValueError("Only one of query_jsonl and ir_dataset_name can be provided.")
 
     if query_jsonl is not None and do_eval and qrel_json is None:
         raise ValueError(
@@ -320,9 +297,7 @@ def do_retrieval_shared(
     retrieval_file = output_dir / "retrieved_items.jsonl"
     metric_dir = output_dir / "metrics"
 
-    retriever = retriever_cls(
-        **retriever_kwargs
-    )
+    retriever = retriever_cls(**retriever_kwargs)
 
     if query_jsonl is not None:
         retrieve_for_jsonl_queries(

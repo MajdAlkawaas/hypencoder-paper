@@ -8,8 +8,6 @@ from transformers import AutoTokenizer
 
 # Added these imports
 # from ..modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
-from transformers import AutoConfig
-from collections import OrderedDict
 
 from hypencoder_cb.inference.shared import (
     BaseRetriever,
@@ -19,7 +17,10 @@ from hypencoder_cb.inference.shared import (
     retrieve_for_ir_dataset_queries,
     retrieve_for_jsonl_queries,
 )
-from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
+from hypencoder_cb.modeling.hypencoder import (
+    HypencoderDualEncoder,
+    HypencoderDualEncoderConfig,
+)
 from hypencoder_cb.utils.data_utils import (
     load_qrels_from_ir_datasets,
     load_qrels_from_json,
@@ -34,7 +35,6 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
 class HypencoderRetriever(BaseRetriever):
-
     def __init__(
         self,
         model_name_or_path: str,
@@ -87,8 +87,8 @@ class HypencoderRetriever(BaseRetriever):
             query_model_kwargs = {}
 
         self.query_model_kwargs = query_model_kwargs
-# --------------------------------------------------------------------------------
-        
+        # --------------------------------------------------------------------------------
+
         ORIGINAL_MODEL_NAME = "jfkback/hypencoder.6_layer"
         LOCAL_CHECKPOINT_PATH = model_name_or_path
 
@@ -98,7 +98,7 @@ class HypencoderRetriever(BaseRetriever):
         # print(f"Step 1: Creating final model architecture from {ORIGINAL_MODEL_NAME} config...")
         # config = HypencoderDualEncoderConfig.from_pretrained(ORIGINAL_MODEL_NAME)
         # config.shared_encoder = True # Enforce the correct architecture
-        
+
         # # Create an empty shell of the model, with randomly initialized weights.
         # final_model = HypencoderDualEncoder(config)
 
@@ -111,7 +111,7 @@ class HypencoderRetriever(BaseRetriever):
         # # This contains the correct passage_encoder.transformer weights (even though they are shared).
         # print(f"Step 3: Loading weights from the original public model: {ORIGINAL_MODEL_NAME}")
         # original_state_dict = HypencoderDualEncoder.from_pretrained(ORIGINAL_MODEL_NAME).state_dict()
-        
+
         # # 4. Surgically combine the state dictionaries.
         # print("Step 4: Combining weights from both sources...")
         # combined_state_dict = OrderedDict() # Use an ordered dict to maintain key order
@@ -136,7 +136,7 @@ class HypencoderRetriever(BaseRetriever):
         #             print(f"  [FROM LOCAL] Loaded weight for: {key}")
         #         else:
         #             print(f"  [WARNING] Could not find local weight for: {key}")
-            
+
         #     else:
         #          # This handles any other parameters that might exist
         #          if key in local_state_dict:
@@ -144,19 +144,18 @@ class HypencoderRetriever(BaseRetriever):
         #          elif key in original_state_dict:
         #             combined_state_dict[key] = original_state_dict[key]
 
-
         # # 5. Load the newly constructed state dictionary into our empty model shell.
         # print("Step 5: Loading the combined weights into the final model...")
         # final_model.load_state_dict(combined_state_dict, strict=True)
-        
+
         # self.model = final_model.to(device, dtype=self.dtype).eval()
-        
+
         # print("--- Advanced Model Composition Complete ---")
         # # --- END OF MODIFIED SECTION ---
 
         # self.tokenizer = AutoTokenizer.from_pretrained(LOCAL_CHECKPOINT_PATH)
 
-# --------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------
 
         print("--- Starting Advanced Model Composition ---")
 
@@ -164,36 +163,38 @@ class HypencoderRetriever(BaseRetriever):
         # This works because your local checkpoint has a complete config.json
         print(f"Step 1: Loading your local checkpoint: {LOCAL_CHECKPOINT_PATH}")
         local_model = HypencoderDualEncoder.from_pretrained(LOCAL_CHECKPOINT_PATH)
-        
+
         # Step 2: Load the original public model.
         print(f"Step 2: Loading the original public model: {ORIGINAL_MODEL_NAME}")
 
         # --- YOUR IMPROVEMENT IS HERE ---
         # a. Load the configuration using our specific, known config class.
         # This is more explicit and robust than using AutoConfig.
-        original_config = HypencoderDualEncoderConfig.from_pretrained(ORIGINAL_MODEL_NAME)
-        
+        original_config = HypencoderDualEncoderConfig.from_pretrained(
+            ORIGINAL_MODEL_NAME
+        )
+
         # b. Now load the model weights using this explicit config.
         # This cleanly bypasses the "Unrecognized model" error.
         original_model = HypencoderDualEncoder.from_pretrained(
-            ORIGINAL_MODEL_NAME, 
-            config=original_config
+            ORIGINAL_MODEL_NAME, config=original_config
         )
         # --- END OF IMPROVEMENT ---
-        
+
         # Step 3: Surgically replace the passage encoder's transformer.
         print("Step 3: Swapping the transformer module for the passage encoder.")
-        local_model.passage_encoder.transformer = original_model.passage_encoder.transformer
-        
+        local_model.passage_encoder.transformer = (
+            original_model.passage_encoder.transformer
+        )
+
         # Step 4: Finalize the model.
         self.model = local_model.to(device, dtype=self.dtype).eval()
-        
+
         print("--- Advanced Model Composition Complete ---")
 
         self.tokenizer = AutoTokenizer.from_pretrained(LOCAL_CHECKPOINT_PATH)
-# --------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------
 
-        
         print("Started loading encoded items...")
         encoded_items = load_encoded_items_from_disk(
             encoded_item_path,
@@ -207,9 +208,7 @@ class HypencoderRetriever(BaseRetriever):
         )
 
         if self.put_on_device:
-            self.encoded_item_embeddings = self.encoded_item_embeddings.to(
-                self.device
-            )
+            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
 
         self.encoded_item_ids = [x.id for x in tqdm(encoded_items)]
         self.encoded_item_texts = [x.text for x in tqdm(encoded_items)]
@@ -231,9 +230,7 @@ class HypencoderRetriever(BaseRetriever):
 
         query_model = query_output.representation
 
-        num_batches = (
-            len(self.encoded_item_embeddings) // self.batch_size
-        ) + 1
+        num_batches = (len(self.encoded_item_embeddings) // self.batch_size) + 1
 
         top_k_indices = torch.full((top_k * num_batches,), -1)
         top_k_scores = torch.full((top_k * num_batches,), -float("inf"))
@@ -254,22 +251,17 @@ class HypencoderRetriever(BaseRetriever):
             indices = indices.squeeze(0).cpu()
             values = values.squeeze(0).cpu()
 
-            top_k_indices[batch_index * top_k : (batch_index + 1) * top_k] = (
-                indices + (batch_index * self.batch_size)
+            top_k_indices[batch_index * top_k : (batch_index + 1) * top_k] = indices + (
+                batch_index * self.batch_size
             )
-            top_k_scores[batch_index * top_k : (batch_index + 1) * top_k] = (
-                values
-            )
+            top_k_scores[batch_index * top_k : (batch_index + 1) * top_k] = values
 
         final_values, indices = torch.topk(top_k_scores, top_k, dim=0)
         final_indices = top_k_indices[indices]
 
         items = []
         for item_idx, score in zip(final_indices, final_values):
-            if (
-                self.ignore_same_id
-                and query.id == self.encoded_item_ids[item_idx]
-            ):
+            if self.ignore_same_id and query.id == self.encoded_item_ids[item_idx]:
                 continue
 
             items.append(
@@ -313,14 +305,10 @@ def do_eval_and_pretty_print(
     """
 
     if ir_dataset_name is None and qrel_json is None:
-        raise ValueError(
-            "One of ir_dataset_name or qrel_json must be provided."
-        )
+        raise ValueError("One of ir_dataset_name or qrel_json must be provided.")
 
     if ir_dataset_name is not None and qrel_json is not None:
-        raise ValueError(
-            "Only one of ir_dataset_name or qrel_json can be provided."
-        )
+        raise ValueError("Only one of ir_dataset_name or qrel_json can be provided.")
 
     if qrel_json is not None:
         qrels = load_qrels_from_json(qrel_json)
@@ -330,9 +318,7 @@ def do_eval_and_pretty_print(
     retrieval_path = Path(retrieval_path)
     retrieval_pretty_path = retrieval_path.with_suffix(".txt")
 
-    pretty_print_standard_format(
-        retrieval_path, output_file=retrieval_pretty_path
-    )
+    pretty_print_standard_format(retrieval_path, output_file=retrieval_pretty_path)
     run = load_standard_format_as_run(retrieval_path, score_key="score")
 
     calculate_metrics_to_file(
@@ -397,9 +383,7 @@ def do_retrieval_shared(
     """
 
     if query_jsonl is not None and ir_dataset_name is not None:
-        raise ValueError(
-            "Only one of query_jsonl and ir_dataset_name can be provided."
-        )
+        raise ValueError("Only one of query_jsonl and ir_dataset_name can be provided.")
 
     if query_jsonl is not None and do_eval and qrel_json is None:
         raise ValueError(
@@ -413,9 +397,7 @@ def do_retrieval_shared(
     retrieval_file = output_dir / "retrieved_items.jsonl"
     metric_dir = output_dir / "metrics"
 
-    retriever = retriever_cls(
-        **retriever_kwargs
-    )
+    retriever = retriever_cls(**retriever_kwargs)
 
     if query_jsonl is not None:
         retrieve_for_jsonl_queries(

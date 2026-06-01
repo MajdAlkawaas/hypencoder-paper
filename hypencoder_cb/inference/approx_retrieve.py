@@ -24,7 +24,6 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
 class HypecoderGraphRetriever(BaseRetriever):
-
     def __init__(
         self,
         model_name_or_path: str,
@@ -103,21 +102,15 @@ class HypecoderGraphRetriever(BaseRetriever):
                 self.item_id_to_index = cache["item_id_to_index"]
                 self.item_id_to_content = cache["item_id_to_content"]
                 self.item_neighbor_ids = cache["item_neighbor_ids"]
-                self.item_id_to_neighbor_indices = cache[
-                    "item_id_to_neighbor_indices"
-                ]
+                self.item_id_to_neighbor_indices = cache["item_id_to_neighbor_indices"]
 
         else:
-            self.encoded_items = load_encoded_items_from_disk(
-                encoded_item_path
-            )
+            self.encoded_items = load_encoded_items_from_disk(encoded_item_path)
 
             self.encoded_item_embeddings = torch.stack(
                 [
                     torch.tensor(x.representation)
-                    for x in tqdm(
-                        self.encoded_items, desc="Item Embeddings to Tensor"
-                    )
+                    for x in tqdm(self.encoded_items, desc="Item Embeddings to Tensor")
                 ]
             ).to(self.device, dtype=self.dtype)
 
@@ -179,9 +172,7 @@ class HypecoderGraphRetriever(BaseRetriever):
         self.entry_point_embeddings = self.encoded_item_embeddings[
             self.entry_point_indices
         ]
-        self.entry_point_ids = [
-            self.ids[idx] for idx in self.entry_point_indices
-        ]
+        self.entry_point_ids = [self.ids[idx] for idx in self.entry_point_indices]
 
     def retrieve(self, query: TextQuery, top_k: int) -> List[Item]:
         tokenized_query = self.tokenizer(
@@ -212,9 +203,7 @@ class HypecoderGraphRetriever(BaseRetriever):
             candidate_embeddings = candidate_embeddings.unsqueeze(0)
             similarity_matrix = query_model(candidate_embeddings).squeeze()
 
-            ncandidates = min(
-                max(self.ncandidates, top_k), similarity_matrix.shape[0]
-            )
+            ncandidates = min(max(self.ncandidates, top_k), similarity_matrix.shape[0])
             values, indices = torch.topk(similarity_matrix, ncandidates, dim=0)
 
             indices = indices.squeeze(0).cpu()

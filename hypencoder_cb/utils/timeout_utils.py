@@ -1,8 +1,8 @@
-# timeout utility used for making the trainer shutdown while it is 
+# timeout utility used for making the trainer shutdown while it is
 # training, to test configs that might cause a data hang issue
 
 # This timeout utility will shut down the trainer after a particular
-# amount of time so it will shutdown the training regardless of 
+# amount of time so it will shutdown the training regardless of
 # whether any problems happened or not.
 
 # The timeout period is defined inside the train.py file
@@ -10,14 +10,19 @@
 
 import signal
 
+
 class TimeoutException(Exception):
     """Custom exception to be raised on a timeout."""
+
     pass
+
 
 class timeout:
     def __init__(self, seconds=60, error_message="Timeout after {} seconds"):
         if not hasattr(signal, "SIGALRM"):
-            raise RuntimeError("The timeout context manager is not supported on this OS.")
+            raise RuntimeError(
+                "The timeout context manager is not supported on this OS."
+            )
         self.seconds = seconds
         self.error_message = error_message.format(seconds)
 

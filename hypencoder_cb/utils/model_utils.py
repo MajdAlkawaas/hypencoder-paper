@@ -1,17 +1,18 @@
 import logging
-from omegaconf import OmegaConf
 from transformers import AutoModel
 
-from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
-from hypencoder_cb.train.args import HypencoderModelConfig # Reuse the config schema
+from hypencoder_cb.modeling.hypencoder import (
+    HypencoderDualEncoder,
+)
 
 logger = logging.getLogger(__name__)
+
 
 def load_hypencoder_model(
     model_name_or_path: str,
     # The following args are for building a model from scratch if path is None
-    query_encoder_name: str = None,
-    passage_encoder_name: str = None,
+    query_encoder_name: str | None = None,
+    passage_encoder_name: str | None = None,
     is_shared: bool = True,
     # Add other necessary architectural details if they aren't in the config
 ) -> HypencoderDualEncoder:
@@ -19,7 +20,7 @@ def load_hypencoder_model(
     A robust, centralized function to load a HypencoderDualEncoder.
     It correctly handles resuming from checkpoints with potentially broken
     encoder weights by reloading them from their source.
-    
+
     Args:
         model_name_or_path: Path to the local checkpoint or Hub model name.
     """
@@ -28,7 +29,7 @@ def load_hypencoder_model(
     # 1. Load the model from the checkpoint. This loads the hyper-head correctly.
     # The encoders might be randomly initialized if the checkpoint is "broken".
     model = HypencoderDualEncoder.from_pretrained(model_name_or_path)
-    config = model.config # Get the config that was loaded with the model
+    config = model.config  # Get the config that was loaded with the model
 
     # 2. Re-load the encoder backbones from their original sources to guarantee correctness.
     # The config stored with the checkpoint tells us where they came from.

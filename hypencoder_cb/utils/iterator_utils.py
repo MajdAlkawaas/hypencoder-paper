@@ -5,9 +5,7 @@ from typing import Iterable, List, TypeVar
 Item = TypeVar("Item")
 
 
-def batchify_slicing(
-    items: Iterable[Item], batch_size: int
-) -> Iterable[List[Item]]:
+def batchify_slicing(items: Iterable[Item], batch_size: int) -> Iterable[List[Item]]:
     for i in range(0, len(items), batch_size):
         yield items[i : i + batch_size]
 
