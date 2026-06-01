@@ -8,7 +8,6 @@ from transformers import AutoTokenizer
 
 # Added these imports
 # from ..modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
-
 from hypencoder_cb.inference.shared import (
     BaseRetriever,
     Item,

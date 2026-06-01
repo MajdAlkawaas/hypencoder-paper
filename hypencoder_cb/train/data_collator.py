@@ -1,10 +1,9 @@
+import logging
 import random
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
 from transformers import AutoTokenizer
-import logging
-
 
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)

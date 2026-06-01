@@ -1,15 +1,17 @@
+import logging
 import os
 import sys
-import logging
 from typing import Optional
-import torch.nn as nn
-import torch
+
 import fire
+import torch
+import torch.nn as nn
 from datasets import load_dataset
 from omegaconf import OmegaConf
 from transformers import AutoTokenizer, Trainer, TrainingArguments
-from hypencoder_cb.modeling.hypencoder import Hypencoder
+
 from hypencoder_cb.modeling.hypencoder import (
+    Hypencoder,
     HypencoderDualEncoder,
     HypencoderDualEncoderConfig,
     TextDualEncoder,

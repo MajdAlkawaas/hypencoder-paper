@@ -1,6 +1,6 @@
+import fire
 from docarray import DocList
 from tqdm import tqdm
-import fire
 
 # Import the schema from the original codebase
 from hypencoder_cb.inference.shared import EncodedItem

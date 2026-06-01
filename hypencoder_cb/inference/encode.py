@@ -6,9 +6,9 @@ from transformers import AutoTokenizer
 
 from hypencoder_cb.inference.shared import (
     BaseEncoder,
+    VectorEncodedRepresentation,
     encode_ir_dataset_items_to_disk,
     encode_jsonl_items_to_disk,
-    VectorEncodedRepresentation,
 )
 from hypencoder_cb.modeling.hypencoder import (
     HypencoderDualEncoder,

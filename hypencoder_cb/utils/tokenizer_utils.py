@@ -6,8 +6,8 @@ import fire
 from tqdm import tqdm
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
-from hypencoder_cb.utils.jsonl_utils import JsonlReader, JsonlWriter
 from hypencoder_cb.utils.iterator_utils import batchify
+from hypencoder_cb.utils.jsonl_utils import JsonlReader, JsonlWriter
 
 
 def tokenizer_standard_format_file(

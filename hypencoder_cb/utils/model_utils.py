@@ -1,4 +1,5 @@
 import logging
+
 from transformers import AutoModel
 
 from hypencoder_cb.modeling.hypencoder import (

@@ -6,11 +6,6 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-# Added these imports
-# from ..modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
-
-from hypencoder_cb.utils.model_utils import load_hypencoder_model
-
 from hypencoder_cb.inference.shared import (
     BaseRetriever,
     Item,
@@ -29,6 +24,10 @@ from hypencoder_cb.utils.eval_utils import (
     pretty_print_standard_format,
 )
 from hypencoder_cb.utils.iterator_utils import batchify_slicing
+
+# Added these imports
+# from ..modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
+from hypencoder_cb.utils.model_utils import load_hypencoder_model
 from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
