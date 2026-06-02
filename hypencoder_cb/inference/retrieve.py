@@ -226,10 +226,10 @@ def do_eval_and_pretty_print(
     else:
         qrels = load_qrels_from_ir_datasets(ir_dataset_name)
 
-    retrieval_path = Path(retrieval_path)
-    retrieval_pretty_path = retrieval_path.with_suffix(".txt")
+    # retrieval_path = Path(retrieval_path)
+    retrieval_pretty_path = Path(retrieval_path).with_suffix(".txt")
 
-    pretty_print_standard_format(retrieval_path, output_file=retrieval_pretty_path)
+    pretty_print_standard_format(retrieval_path, output_file=str(retrieval_pretty_path))
     run = load_standard_format_as_run(retrieval_path, score_key="score")
 
     calculate_metrics_to_file(
@@ -302,11 +302,11 @@ def do_retrieval_shared(
             " qrel_json must be provided."
         )
 
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir_path = Path(output_dir)
+    output_dir_path.mkdir(parents=True, exist_ok=True)
 
-    retrieval_file = output_dir / "retrieved_items.jsonl"
-    metric_dir = output_dir / "metrics"
+    retrieval_file = str(output_dir_path / "retrieved_items.jsonl")
+    metric_dir = str(output_dir_path / "metrics")
 
     retriever = retriever_cls(**retriever_kwargs)
 
@@ -321,7 +321,7 @@ def do_retrieval_shared(
             query_id_key=query_id_key,
             query_text_key=query_text_key,
         )
-    else:
+    elif ir_dataset_name is not None:
         retrieve_for_ir_dataset_queries(
             retriever=retriever,
             ir_dataset_name=ir_dataset_name,
@@ -331,6 +331,8 @@ def do_retrieval_shared(
             include_type=include_content,
             track_time=True,
         )
+    else:
+        raise ValueError("ir_dataset_name or query_jsonl must be provided")
 
     if do_eval:
         do_eval_and_pretty_print(
