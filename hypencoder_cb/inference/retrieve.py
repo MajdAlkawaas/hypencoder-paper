@@ -279,8 +279,6 @@ def do_retrieval_shared(
             "text".
         top_k (int, optional): The number of top items to retrieve. Defaults to
             1000.
-        retriever_kwargs (dict | None, optional): Additional keyword
-            arguments to pass to the retriever. Defaults to None.
         include_content (bool, optional): Whether to include the content of the
             retrieved items in the output. Defaults to True.
         do_eval (bool, optional): Whether to do evaluation. Defaults to True.
