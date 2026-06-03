@@ -1,9 +1,9 @@
-from datasets import load_dataset
 import logging
 import sys
-import jsonlines
-from tqdm import tqdm
 
+import jsonlines
+from datasets import load_dataset
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(

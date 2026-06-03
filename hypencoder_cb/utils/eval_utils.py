@@ -1,13 +1,12 @@
+import json
 from collections import defaultdict
 from numbers import Number
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import ir_measures
-import json
 
 from hypencoder_cb.utils.jsonl_utils import JsonlReader
-
 
 DEFAULT_METRICS = [
     "nDCG@10",

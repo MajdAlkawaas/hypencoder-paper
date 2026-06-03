@@ -1,9 +1,10 @@
 # In hypencoder_cb/inference/evaluate_all_checkpoints.py
 
-import fire
-import os
 import glob
+import os
 from pathlib import Path
+
+import fire
 
 # Import necessary components from the existing codebase
 from hypencoder_cb.inference.retrieve import (
