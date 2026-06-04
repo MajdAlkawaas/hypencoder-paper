@@ -1,15 +1,11 @@
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import fire
 import torch
 from tqdm import tqdm
-from transformers import AutoTokenizer
-
-# Added these imports
-# from ..modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
-from transformers import AutoConfig
-from collections import OrderedDict
+from transformers import AutoConfig, AutoTokenizer
 
 from hypencoder_cb.inference.shared import (
     BaseRetriever,
@@ -19,7 +15,10 @@ from hypencoder_cb.inference.shared import (
     retrieve_for_ir_dataset_queries,
     retrieve_for_jsonl_queries,
 )
-from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder, HypencoderDualEncoderConfig
+from hypencoder_cb.modeling.hypencoder import (
+    HypencoderDualEncoder,
+    HypencoderDualEncoderConfig,
+)
 from hypencoder_cb.utils.data_utils import (
     load_qrels_from_ir_datasets,
     load_qrels_from_json,

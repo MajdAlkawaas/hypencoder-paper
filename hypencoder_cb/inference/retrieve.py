@@ -14,8 +14,6 @@ from hypencoder_cb.inference.shared import (
     retrieve_for_ir_dataset_queries,
     retrieve_for_jsonl_queries,
 )
-
-
 from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder
 from hypencoder_cb.utils.data_utils import (
     load_qrels_from_ir_datasets,

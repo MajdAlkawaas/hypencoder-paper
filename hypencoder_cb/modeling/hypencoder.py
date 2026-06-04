@@ -13,12 +13,14 @@ from hypencoder_cb.modeling.shared import (
     BaseDualEncoderConfig,
     EncoderOutput,
 )
+
+# MATRYOSHKA: Change, added this import
 from hypencoder_cb.modeling.similarity_and_losses import (
     HypencoderCrossEntropyLoss,
     HypencoderMarginMSELoss,
+    HypencoderMatryoshkaDimMarginMSELoss,
 )
-# MATRYOSHKA: Change, added this import
-from hypencoder_cb.modeling.similarity_and_losses import HypencoderMatryoshkaDimMarginMSELoss 
+
 
 def scaled_dot_product_attention(
     query: torch.Tensor,

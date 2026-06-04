@@ -1,22 +1,30 @@
+import glob
+import os
+from pathlib import Path
+from typing import List, Optional
+
 import fire
 import torch
-import os
-import glob
-from typing import List, Optional
-from pathlib import Path
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-
 # Import necessary components from the existing codebase
-from hypencoder_cb.inference.retrieve import HypencoderRetriever, do_eval_and_pretty_print
-from hypencoder_cb.inference.shared import load_encoded_items_from_disk, retrieve_for_ir_dataset_queries, Item
-from hypencoder_cb.modeling.q_net import RepeatedDenseBlockConverter
+from hypencoder_cb.inference.retrieve import (
+    HypencoderRetriever,
+    do_eval_and_pretty_print,
+)
+from hypencoder_cb.inference.shared import (
+    Item,
+    load_encoded_items_from_disk,
+    retrieve_for_ir_dataset_queries,
+)
 from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder
-from hypencoder_cb.utils.torch_utils import dtype_lookup
+from hypencoder_cb.modeling.q_net import RepeatedDenseBlockConverter
 
 # Import the helper function we created for the Matryoshka loss
 from hypencoder_cb.modeling.similarity_and_losses import _truncate_parameters
+from hypencoder_cb.utils.torch_utils import dtype_lookup
+
 
 class MatryoshkaHypencoderRetriever(HypencoderRetriever):
     """

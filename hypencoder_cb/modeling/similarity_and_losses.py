@@ -1,10 +1,12 @@
+import logging
 from dataclasses import dataclass
-from typing import Callable, Optional, List
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, List, Optional
+
 import torch
 import torch.nn as nn
-import logging
+
 from hypencoder_cb.modeling.shared import EncoderOutput
+
 from .q_net import RepeatedDenseBlockConverter
 
 # from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder # For type hinting

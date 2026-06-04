@@ -1,15 +1,18 @@
+import logging
 import os
 import sys
-import logging
 from typing import Optional
-import torch.nn as nn
-import torch
+
 import fire
+import torch
+import torch.nn as nn
 from datasets import load_dataset
 from omegaconf import OmegaConf
+from torch.nn.modules.normalization import LayerNorm
 from transformers import AutoTokenizer, Trainer, TrainingArguments
-from hypencoder_cb.modeling.hypencoder import Hypencoder
+
 from hypencoder_cb.modeling.hypencoder import (
+    Hypencoder,
     HypencoderDualEncoder,
     HypencoderDualEncoderConfig,
     TextDualEncoder,
@@ -24,7 +27,7 @@ from hypencoder_cb.train.args import (
 from hypencoder_cb.train.data_collator import GeneralDualEncoderCollator
 
 # Added this import at the top of the file
-from hypencoder_cb.utils.timeout_utils import timeout, TimeoutException
+from hypencoder_cb.utils.timeout_utils import TimeoutException, timeout
 
 DEFAULT_CACHE_DIR = os.environ.get(
     "HYPENCODER_CACHE_DIR", os.path.expanduser("~/.cache/hypencoder")

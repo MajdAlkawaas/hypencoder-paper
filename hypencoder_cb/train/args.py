@@ -5,6 +5,7 @@ from typing import Any, Dict, Literal, Optional
 import fire
 from omegaconf import OmegaConf
 
+
 # Added LoggingConfig dataclass for controlling the logging behavior
 @dataclass
 class LoggingConfig:
