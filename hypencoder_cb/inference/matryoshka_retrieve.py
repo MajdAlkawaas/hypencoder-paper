@@ -19,10 +19,9 @@ from hypencoder_cb.inference.shared import (
     retrieve_for_ir_dataset_queries,
 )
 from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder
-from hypencoder_cb.modeling.q_net import RepeatedDenseBlockConverter
+from hypencoder_cb.modeling.q_net import MatryoshkaQNetFactory
 
 # Import the helper function we created for the Matryoshka loss
-from hypencoder_cb.modeling.similarity_and_losses import _truncate_parameters
 from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
@@ -78,12 +77,11 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
         # CHANGE: ADDED THIS LINE
         self.embeddings_on_gpu = self.encoded_item_embeddings.device.type == "cuda"
 
-        # 3. Move embeddings to GPU if requested.
-        # CHANGE Commented the next two lines
-        # if self.put_on_device:
-        #     self.encoded_item_embeddings = self.encoded_item_embeddings.to(
-        #         self.device
-        #     )
+        
+
+        self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
+            original_converter=self.model.query_encoder.weight_to_model_converter
+        )
 
         print(
             "INFO: MatryoshkaRetriever initialized for dimension: "
@@ -112,41 +110,17 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
             )
             full_matrices = query_output.generated_matrices
             full_vectors = query_output.generated_vectors
+        
 
-        # 2. Truncate the parameters to the target Matryoshka dimension
-        dim_in = self.encoded_item_embeddings.shape[-1]
-        dim_out = 1
-        truncated_matrices, truncated_vectors = _truncate_parameters(
-            full_matrices, full_vectors, dim_in, self.matryoshka_dim, dim_out
-        )
 
-        # 3. Build the temporary, smaller q-net for this dimension
-        original_converter = self.model.query_encoder.weight_to_model_converter
-        num_hidden_layers = original_converter.num_layers - 2
-
-        if num_hidden_layers < 0:
-            matryoshka_layer_dims = [dim_in, dim_out]
-        else:
-            matryoshka_layer_dims = (
-                [dim_in] + [self.matryoshka_dim] * (num_hidden_layers + 1) + [dim_out]
-            )
-
-        temp_converter = RepeatedDenseBlockConverter(
-            vector_dimensions=matryoshka_layer_dims,
-            activation_type=original_converter.activation.__class__.__name__.lower().replace(
-                "relu", "relu"
-            ),
-            do_dropout=False,  # No dropout during inference
-            dropout_prob=original_converter.dropout_prob,
-            do_layer_norm=original_converter.do_layer_norm,
-            do_residual=original_converter.do_residual,
-            do_residual_on_last=original_converter.do_residual_on_last,
-            layer_norm_before_residual=original_converter.layer_norm_before_residual,
-        )
-        q_net_at_dim = temp_converter(
-            truncated_matrices, truncated_vectors, is_training=False
-        )
-
+        matryoshka_qnets = self.matryoshka_qnet_factory.build(
+                                            full_matrices,
+                                            full_vectors,
+                                            [self.matryoshka_dim],
+                                            is_training=False,
+                                            )
+        # Get the Q-Net out of the dictionary.
+        q_net_at_dim = matryoshka_qnets[self.matryoshka_dim]
         # 4. Use this smaller q-net to score the documents (batched logic from parent)
         #    This part of the logic is reused from the parent `retrieve` method.
         num_batches = (len(self.encoded_item_embeddings) // self.batch_size) + 1
@@ -160,16 +134,6 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
             for batch_index, batch_item_embeddings in enumerate(
                 torch.split(self.encoded_item_embeddings, self.batch_size)
             ):
-                # CHANGE: commented this if statement
-                # if self.put_on_device:
-                #     # If all embeddings are already on GPU, we're good.
-                #     pass
-                # else:
-                #     # Otherwise, move the current batch to the GPU.
-                #     batch_item_embeddings = batch_item_embeddings.to(self.device)
-
-                # CHANGE: Added the following if statement
-                # If embeddings are NOT on the GPU, move the current batch.
                 if not embeddings_are_on_gpu:
                     batch_item_embeddings = batch_item_embeddings.to(self.device)
 
@@ -178,8 +142,7 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
                 # Use our on-the-fly q-net here
                 similarity_matrix = q_net_at_dim(batch_item_embeddings).squeeze()
 
-                # ----------- CHANGE COMMENTED -------------
-                # Find topk within the batch
+
                 values, indices = torch.topk(
                     similarity_matrix, min(top_k, similarity_matrix.shape[0]), dim=0
                 )
@@ -192,27 +155,6 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
                     batch_index * self.batch_size
                 )
                 top_k_scores[start_idx:end_idx] = values
-                # ----------- CHANGE END -------------
-
-                # --------- CHANGE ADDED THIS: START -------------
-                # if k_for_batch > 0:
-                #     values, indices = torch.topk(
-                #         similarity_matrix, k_for_batch, dim=0
-                #     )
-
-                #     # Move results to CPU immediately to free VRAM for the next step
-                #     indices = indices.squeeze(0).cpu()
-                #     values = values.squeeze(0).cpu()
-
-                #     start_idx = batch_index * top_k
-                #     end_idx = start_idx + len(indices)
-
-                #     # Store the results in the CPU tensors
-                #     top_k_indices[start_idx:end_idx] = indices + (
-                #         batch_index * self.batch_size
-                #     )
-                #     top_k_scores[start_idx:end_idx] = values
-                # --------- CHANGE END -------------
 
         # Find the final top_k across all batches
         final_values, final_indices_of_indices = torch.topk(top_k_scores, top_k, dim=0)
@@ -381,3 +323,6 @@ def evaluate_matryoshka_checkpoints(
 
 if __name__ == "__main__":
     fire.Fire(evaluate_matryoshka_checkpoints)
+
+
+# 
