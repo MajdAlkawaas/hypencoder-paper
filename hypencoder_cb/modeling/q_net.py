@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 
 
 class NoTorchSequential:
-
     def __init__(
         self,
         layers,
@@ -110,10 +110,10 @@ class NoTorchDenseBlock:
             torch.Tensor: Output vectors with the shape:
                 (num_queries, num_items_per_query, output_hidden_size)
         """
-        # MATRYOSHKA: change, created copies 
+        # MATRYOSHKA: change, created copies
         y_out = x.clone()
         y_out = self.linear(y_out)
-        
+
         if self.do_dropout:
             y = F.dropout(x, self.dropout_prob)
         else:
@@ -135,16 +135,17 @@ class NoTorchDenseBlock:
             # If output is smaller than input (e.g., projection 768 -> 64),
             # pad the output with zeros to match the input shape before adding.
             elif y_out.shape[-1] < x.shape[-1]:
-                # 1. Create a zero tensor with the same shape and device as the input `x`.
+                # 1. Create a zero tensor with the same shape and device
+                #    as the input `x`.
                 y_padded = torch.zeros_like(x)
-                
+
                 # 2. Get the smaller dimension size.
                 small_dim = y_out.shape[-1]
-                
+
                 # 3. Copy the contents of the smaller output tensor `y_out` into the
                 #    beginning of the padded tensor.
                 y_padded[..., :small_dim] = y_out
-                
+
                 # 4. Perform the addition with matching shapes.
                 y_out = y_padded + x
             # Note: We don't handle the case where y_out > x, as it's not expected
@@ -176,7 +177,7 @@ def activation_factory(
 class RepeatedDenseBlockConverter:
     def __init__(
         self,
-        vector_dimensions: List[int],
+        vector_dimensions: list[int],
         activation_type: str = "relu",
         do_dropout: bool = False,
         dropout_prob: float = 0.1,
@@ -187,7 +188,7 @@ class RepeatedDenseBlockConverter:
     ):
         """ "
         Args:
-            vector_dimensions (List[int]): The dimension of the input,
+            vector_dimensions (list[int]): The dimension of the input,
                 intermediate, and output vectors. These are used to determine
                 the weight and bias shapes for the q-net. The first value
                 should be the dimension of the input vectors, and the last
@@ -211,16 +212,13 @@ class RepeatedDenseBlockConverter:
             ValueError: If `do_residual_on_last` is True and `do_residual`
                 is False.
         """
-
+        self.vector_dimensions = vector_dimensions
         self.weight_shapes = []
         for i in range(1, len(vector_dimensions)):
-            self.weight_shapes.append(
-                (vector_dimensions[i - 1], vector_dimensions[i])
-            )
+            self.weight_shapes.append((vector_dimensions[i - 1], vector_dimensions[i]))
 
         self.bias_shapes = [
-            (vector_dimensions[i], 1)
-            for i in range(1, len(vector_dimensions) - 1)
+            (vector_dimensions[i], 1) for i in range(1, len(vector_dimensions) - 1)
         ]
 
         self.num_layers = len(self.weight_shapes)
@@ -244,8 +242,8 @@ class RepeatedDenseBlockConverter:
 
     def __call__(
         self,
-        matrices: List[torch.Tensor],
-        vectors: List[torch.Tensor],
+        matrices: list[Tensor],
+        vectors: list[Tensor],
         is_training: bool,
     ) -> NoTorchSequential:
         """
@@ -297,3 +295,100 @@ class RepeatedDenseBlockConverter:
         )
 
         return NoTorchSequential(layers, num_queries=batch_size)
+
+
+class MatryoshkaQNetFactory:
+    def __init__(self, original_converter: RepeatedDenseBlockConverter):
+        self.original_converter = original_converter
+
+    def _truncate_parameters(
+        self,
+        weights_matrices: list[Tensor],
+        bias_vectors: list[Tensor],
+        dim_in: int,
+        dim_hidden: int,
+        dim_out: int,
+    ) -> tuple[list[Tensor], list[Tensor]]:
+        """
+        Helper to truncate weights and biases for a specific Matryoshka dimension.
+
+        Args:
+            matrices (List[torch.Tensor]): The weight matrices with the shapes:
+
+            vectors (List[torch.Tensor]): The bias vectors with the shapes:
+
+            dim_in (int): The dimension of the input vectors.
+            dim_hidden (int): The dimension of the hidden vectors.
+            dim_out (int): The dimension of the output vectors.
+
+        Returns:
+            tuple[list[Tensor], list[Tensor]]: A tuple of the truncated weight matrices
+                and bias vectors.
+        """
+        truncated_matrices = []
+
+        # First matrix: (batch, dim_in, full_hidden) -> (batch, dim_in, dim_hidden)
+        truncated_matrices.append(weights_matrices[0][:, :dim_in, :dim_hidden])
+
+        # Intermediate matrices: (batch, full_hidden, full_hidden) ->
+        # (batch, dim_hidden, dim_hidden)
+        for i in range(1, len(weights_matrices) - 1):
+            truncated_matrices.append(weights_matrices[i][:, :dim_hidden, :dim_hidden])
+
+        # Final matrix: (batch, full_hidden, dim_out) -> (batch, dim_hidden, dim_out)
+        truncated_matrices.append(weights_matrices[-1][:, :dim_hidden, :dim_out])
+
+        truncated_vectors = []
+        # Bias vectors: (batch, full_hidden, 1) -> (batch, dim_hidden, 1)
+        for i in range(len(bias_vectors)):
+            truncated_vectors.append(bias_vectors[i][:, :dim_hidden, :])
+
+        return truncated_matrices, truncated_vectors
+
+    def build(
+        self,
+        weight_matrices: list[Tensor],
+        bias_vectors: list[Tensor],
+        matryoshka_dims: list[int],
+        is_training: bool,
+    ):
+        """
+        Args:
+            weight_matrices (List[torch.Tensor]): The weight matrices with the shapes:
+
+            bias_vectors (List[torch.Tensor]): The bias vectors with the shapes:
+
+            matryoshka_dims (List[int]): The dimensions of the matryoshka layers.
+            is_training (bool): Whether the model is in training mode.
+
+        Returns:
+            dict[int, NoTorchSequential]: A dictionary of the q-nets.
+        """
+        q_nets: dict[int, NoTorchSequential] = {}
+
+        for dim in matryoshka_dims:
+            dim_in = self.original_converter.vector_dimensions[0]
+            dim_hidden = dim
+            dim_out = self.original_converter.vector_dimensions[-1]
+
+            # Create a temporary converter with the same settings as the original
+
+            temp_converter = RepeatedDenseBlockConverter(
+                vector_dimensions=self.original_converter.vector_dimensions,
+                activation_type=self.original_converter.activation.__class__.__name__.lower(),
+                do_dropout=self.original_converter.do_dropout,
+                dropout_prob=self.original_converter.dropout_prob,
+                do_layer_norm=self.original_converter.do_layer_norm,
+                do_residual=self.original_converter.do_residual,
+                do_residual_on_last=self.original_converter.do_residual_on_last,
+                layer_norm_before_residual=self.original_converter.layer_norm_before_residual,
+            )
+
+            truncated_matrices, truncated_vectors = self._truncate_parameters(
+                weight_matrices, bias_vectors, dim_in, dim_hidden, dim_out
+            )
+            q_nets[dim] = temp_converter(
+                truncated_matrices, truncated_vectors, is_training=is_training
+            )
+
+        return q_nets

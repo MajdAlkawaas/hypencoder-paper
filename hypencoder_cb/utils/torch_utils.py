@@ -5,7 +5,7 @@ def dtype_lookup(dtype: str):
 
     # Make the lookup case-insensitive and handle both short and long names
     clean_dtype = dtype.lower()
-    
+
     dtype_lookup = {
         # Short names
         "fp16": torch.float16,
@@ -17,6 +17,9 @@ def dtype_lookup(dtype: str):
         "bfloat16": torch.bfloat16,
     }
     if clean_dtype not in dtype_lookup:
-        raise KeyError(f"Unsupported dtype '{dtype}'. Supported values are: {list(dtype_lookup.keys())}")
-        
+        raise KeyError(
+            f"Unsupported dtype '{dtype}'. Supported values are: "
+            f"{list(dtype_lookup.keys())}"
+        )
+
     return dtype_lookup[clean_dtype]

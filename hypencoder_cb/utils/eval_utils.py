@@ -1,13 +1,12 @@
+import json
 from collections import defaultdict
 from numbers import Number
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import ir_measures
-import json
 
 from hypencoder_cb.utils.jsonl_utils import JsonlReader
-
 
 DEFAULT_METRICS = [
     "nDCG@10",
@@ -80,9 +79,7 @@ def calculate_metrics(
     if metric_names is None:
         metric_names = DEFAULT_METRICS
 
-    metric_objects = [
-        ir_measures.parse_measure(metric) for metric in metric_names
-    ]
+    metric_objects = [ir_measures.parse_measure(metric) for metric in metric_names]
     aggregated_metrics = ir_measures.calc_aggregate(metric_objects, qrels, run)
 
     per_query_metrics = defaultdict(dict)
@@ -146,9 +143,7 @@ def load_standard_format_as_run(
         run = {}
         for line in reader:
             query_id = line["query"]["id"]
-            run[query_id] = {
-                str(item["id"]): item[score_key] for item in line["items"]
-            }
+            run[query_id] = {str(item["id"]): item[score_key] for item in line["items"]}
 
     return run
 
@@ -174,9 +169,7 @@ def pretty_print_standard_format(
                     item_id = item["id"]
                     item_text = item["content"]
                     item_score = item[score_key]
-                    f.write(
-                        f"\t{i + 1}. {item_text} ({item_id}) - {item_score}\n"
-                    )
+                    f.write(f"\t{i + 1}. {item_text} ({item_id}) - {item_score}\n")
                 f.write("\n")
                 f.write("-" * 80)
                 f.write("\n")

@@ -29,40 +29,37 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
 class HypencoderRetriever(BaseRetriever):
+    # Data source arguments
+    # encoded_item_path: Optional[str] = None,
+    # preloaded_embeddings: Optional[torch.Tensor] = None,
+    # preloaded_ids: Optional[List[str]] = None,
+    # preloaded_texts: Optional[List[str]] = None,
+    # preloaded_encoded_items: Optional[List] = None,
 
-        # Data source arguments
-        # encoded_item_path: Optional[str] = None,
-        # preloaded_embeddings: Optional[torch.Tensor] = None,
-        # preloaded_ids: Optional[List[str]] = None,
-        # preloaded_texts: Optional[List[str]] = None,
-        # preloaded_encoded_items: Optional[List] = None,
-        
-        # # Model and config arguments
-        # model_name_or_path: str = None,
-        # model_for_retrieval: Optional[HypencoderDualEncoder] = None,
-        # batch_size: int = 100_000,
-        # device: str = "cuda",
-        # dtype: str = "float32",
-        # put_all_embeddings_on_device: bool = True,
-        # query_max_length: int = 32,
-        # ignore_same_id: bool = False,
-    
+    # # Model and config arguments
+    # model_name_or_path: str = None,
+    # model_for_retrieval: Optional[HypencoderDualEncoder] = None,
+    # batch_size: int = 100_000,
+    # device: str = "cuda",
+    # dtype: str = "float32",
+    # put_all_embeddings_on_device: bool = True,
+    # query_max_length: int = 32,
+    # ignore_same_id: bool = False,
+
     def __init__(
         self,
         model_name_or_path: Optional[str] = None,
         model_for_retrieval: Optional[HypencoderDualEncoder] = None,
-
         preloaded_embeddings: Optional[torch.Tensor] = None,
         preloaded_ids: Optional[List[str]] = None,
         preloaded_texts: Optional[List[str]] = None,
-        
         encoded_item_path: Optional[str] = None,
-        preloaded_encoded_items: Optional[List] = None, # Added new argument
+        preloaded_encoded_items: Optional[List] = None,  # Added new argument
         batch_size: int = 100_000,
         device: str = "cuda",
         dtype: Union[torch.dtype, str] = "float32",
         query_model_kwargs: Optional[Dict] = None,
-        put_all_embeddings_on_device: bool = True, # This will be controlled
+        put_all_embeddings_on_device: bool = True,  # This will be controlled
         query_max_length: int = 32,
         ignore_same_id: bool = False,
     ) -> None:
@@ -103,7 +100,7 @@ class HypencoderRetriever(BaseRetriever):
         self.query_max_length = query_max_length
         self.ignore_same_id = ignore_same_id
         self.put_on_device = put_all_embeddings_on_device
-        
+
         if query_model_kwargs is None:
             query_model_kwargs = {}
 
@@ -120,7 +117,7 @@ class HypencoderRetriever(BaseRetriever):
             preloaded_embeddings=preloaded_embeddings,
             preloaded_ids=preloaded_ids,
             preloaded_texts=preloaded_texts,
-            preloaded_encoded_items=preloaded_encoded_items
+            preloaded_encoded_items=preloaded_encoded_items,
         )
 
         # 3. Move embeddings to GPU if requested
@@ -132,31 +129,43 @@ class HypencoderRetriever(BaseRetriever):
         if model_for_retrieval is not None:
             self.model = model_for_retrieval.to(self.device, dtype=self.dtype).eval()
         elif model_name_or_path is not None:
-            self.model = HypencoderDualEncoder.from_pretrained(model_name_or_path).to(self.device, dtype=self.dtype).eval()
+            self.model = (
+                HypencoderDualEncoder.from_pretrained(model_name_or_path)
+                .to(self.device, dtype=self.dtype)
+                .eval()
+            )
         else:
-            raise ValueError("Must provide 'model_name_or_path' or 'model_for_retrieval'.")
-        
+            raise ValueError(
+                "Must provide 'model_name_or_path' or 'model_for_retrieval'."
+            )
+
         # Tokenizer is always loaded from path for consistency
         if model_name_or_path:
             self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        else: # Fallback for safety, though should not be needed
-            self.tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        else:  # Fallback for safety, though should not be needed
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                "google-bert/bert-base-uncased"
+            )
 
     def _load_and_process_data(self, **kwargs):
         """Helper to load data from one of the provided sources."""
-        if kwargs.get('preloaded_embeddings') is not None:
+        if kwargs.get("preloaded_embeddings") is not None:
             print("INFO: Using pre-processed tensors and lists from memory.")
-            self.encoded_item_embeddings = kwargs['preloaded_embeddings']
-            self.encoded_item_ids = kwargs['preloaded_ids']
-            self.encoded_item_texts = kwargs['preloaded_texts']
-        elif kwargs.get('preloaded_encoded_items') is not None:
+            self.encoded_item_embeddings = kwargs["preloaded_embeddings"]
+            self.encoded_item_ids = kwargs["preloaded_ids"]
+            self.encoded_item_texts = kwargs["preloaded_texts"]
+        elif kwargs.get("preloaded_encoded_items") is not None:
             print("INFO: Processing pre-loaded raw items list...")
-            self._process_encoded_items(kwargs['preloaded_encoded_items'])
-        elif kwargs.get('encoded_item_path') is not None:
-            print(f"INFO: Loading and processing from disk: {kwargs['encoded_item_path']}")
+            self._process_encoded_items(kwargs["preloaded_encoded_items"])
+        elif kwargs.get("encoded_item_path") is not None:
+            print(
+                f"INFO: Loading and processing from disk: {kwargs['encoded_item_path']}"
+            )
             # dtype_str = "fp16" if self.dtype == torch.float16 else "float32"
             dtype_str = "float32"
-            encoded_items = load_encoded_items_from_disk(kwargs['encoded_item_path'], target_dtype=dtype_str)
+            encoded_items = load_encoded_items_from_disk(
+                kwargs["encoded_item_path"], target_dtype=dtype_str
+            )
             self._process_encoded_items(encoded_items)
         else:
             raise ValueError("No data source provided.")
@@ -165,11 +174,18 @@ class HypencoderRetriever(BaseRetriever):
         """Helper for the expensive processing of a raw item list."""
         print("INFO: Stacking item representations into a single torch.Tensor...")
         self.encoded_item_embeddings = torch.stack(
-            [torch.tensor(x.representation, dtype=self.dtype) for x in tqdm(encoded_items, desc="Stacking Embeddings")]
+            [
+                torch.tensor(x.representation, dtype=self.dtype)
+                for x in tqdm(encoded_items, desc="Stacking Embeddings")
+            ]
         )
         print("INFO: Extracting item IDs and texts...")
-        self.encoded_item_ids = [x.id for x in tqdm(encoded_items, desc="Encoded item ids")]
-        self.encoded_item_texts = [x.text for x in tqdm(encoded_items, desc="Encoded item texts")]
+        self.encoded_item_ids = [
+            x.id for x in tqdm(encoded_items, desc="Encoded item ids")
+        ]
+        self.encoded_item_texts = [
+            x.text for x in tqdm(encoded_items, desc="Encoded item texts")
+        ]
 
     def retrieve(self, query: TextQuery, top_k: int) -> List[Item]:
         tokenized_query = self.tokenizer(
@@ -188,9 +204,7 @@ class HypencoderRetriever(BaseRetriever):
 
         query_model = query_output.representation
 
-        num_batches = (
-            len(self.encoded_item_embeddings) // self.batch_size
-        ) + 1
+        num_batches = (len(self.encoded_item_embeddings) // self.batch_size) + 1
 
         top_k_indices = torch.full((top_k * num_batches,), -1)
         top_k_scores = torch.full((top_k * num_batches,), -float("inf"))
@@ -211,22 +225,17 @@ class HypencoderRetriever(BaseRetriever):
             indices = indices.squeeze(0).cpu()
             values = values.squeeze(0).cpu()
 
-            top_k_indices[batch_index * top_k : (batch_index + 1) * top_k] = (
-                indices + (batch_index * self.batch_size)
+            top_k_indices[batch_index * top_k : (batch_index + 1) * top_k] = indices + (
+                batch_index * self.batch_size
             )
-            top_k_scores[batch_index * top_k : (batch_index + 1) * top_k] = (
-                values
-            )
+            top_k_scores[batch_index * top_k : (batch_index + 1) * top_k] = values
 
         final_values, indices = torch.topk(top_k_scores, top_k, dim=0)
         final_indices = top_k_indices[indices]
 
         items = []
         for item_idx, score in zip(final_indices, final_values):
-            if (
-                self.ignore_same_id
-                and query.id == self.encoded_item_ids[item_idx]
-            ):
+            if self.ignore_same_id and query.id == self.encoded_item_ids[item_idx]:
                 continue
 
             items.append(
@@ -270,14 +279,10 @@ def do_eval_and_pretty_print(
     """
 
     if ir_dataset_name is None and qrel_json is None:
-        raise ValueError(
-            "One of ir_dataset_name or qrel_json must be provided."
-        )
+        raise ValueError("One of ir_dataset_name or qrel_json must be provided.")
 
     if ir_dataset_name is not None and qrel_json is not None:
-        raise ValueError(
-            "Only one of ir_dataset_name or qrel_json can be provided."
-        )
+        raise ValueError("Only one of ir_dataset_name or qrel_json can be provided.")
 
     if qrel_json is not None:
         qrels = load_qrels_from_json(qrel_json)
@@ -287,9 +292,7 @@ def do_eval_and_pretty_print(
     retrieval_path = Path(retrieval_path)
     retrieval_pretty_path = retrieval_path.with_suffix(".txt")
 
-    pretty_print_standard_format(
-        retrieval_path, output_file=retrieval_pretty_path
-    )
+    pretty_print_standard_format(retrieval_path, output_file=retrieval_pretty_path)
     run = load_standard_format_as_run(retrieval_path, score_key="score")
 
     calculate_metrics_to_file(
@@ -354,9 +357,7 @@ def do_retrieval_shared(
     """
 
     if query_jsonl is not None and ir_dataset_name is not None:
-        raise ValueError(
-            "Only one of query_jsonl and ir_dataset_name can be provided."
-        )
+        raise ValueError("Only one of query_jsonl and ir_dataset_name can be provided.")
 
     if query_jsonl is not None and do_eval and qrel_json is None:
         raise ValueError(
@@ -370,9 +371,7 @@ def do_retrieval_shared(
     retrieval_file = output_dir / "retrieved_items.jsonl"
     metric_dir = output_dir / "metrics"
 
-    retriever = retriever_cls(
-        **retriever_kwargs
-    )
+    retriever = retriever_cls(**retriever_kwargs)
 
     if query_jsonl is not None:
         retrieve_for_jsonl_queries(

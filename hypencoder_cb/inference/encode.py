@@ -132,9 +132,7 @@ def do_encoding(
     """
 
     if jsonl_path is not None and ir_dataset_name is not None:
-        raise ValueError(
-            "Only one of jsonl_path and ir_dataset_name can be provided."
-        )
+        raise ValueError("Only one of jsonl_path and ir_dataset_name can be provided.")
 
     encoder = InferenceTextEncoder(
         model_name_or_path=model_name_or_path,

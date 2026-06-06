@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Optional
 
 import fire
 from omegaconf import OmegaConf
@@ -10,11 +10,13 @@ from omegaconf import OmegaConf
 @dataclass
 class LoggingConfig:
     """Configuration for custom logging."""
+
     # Controls the overall script logging level.
     # script_log_level: str["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     script_log_level: str = "INFO"
     # Toggles verbose logging inside the DataCollator for debugging batches
-    log_collator : bool = False
+    log_collator: bool = False
+
 
 @dataclass
 class HypencoderModelConfig:
@@ -94,7 +96,7 @@ class HFTrainerConfig:
 
     load_best_model_at_end: bool = False
     metric_for_best_model: Optional[str] = None
-    
+
     # save_only_model: bool = False
     save_safetensors: bool = True
 
@@ -126,24 +128,22 @@ class HFTrainerConfig:
 
 @dataclass
 class HypencoderTrainerConfig:
-    hf_trainer_config: HFTrainerConfig = HFTrainerConfig(
-        output_dir="/tmp/output/"
-    )
+    hf_trainer_config: HFTrainerConfig = HFTrainerConfig(output_dir="/tmp/output/")
     resume_from_checkpoint: Optional[Any] = False
 
 
 @dataclass
 class HypencoderTrainingConfig:
-    model_config:HypencoderModelConfig = HypencoderModelConfig(
-    )
-    data_config:HypencoderDataConfig = HypencoderDataConfig(
+    model_config: HypencoderModelConfig = HypencoderModelConfig()
+    data_config: HypencoderDataConfig = HypencoderDataConfig(
         training_data_jsonl="",
     )
-    trainer_config:HypencoderTrainerConfig = HypencoderTrainerConfig(
+    trainer_config: HypencoderTrainerConfig = HypencoderTrainerConfig(
         hf_trainer_config=HFTrainerConfig(),
     )
     # Added the logging configs
     logging_config: LoggingConfig = field(default_factory=LoggingConfig)
+
 
 def relative_file_path_to_abs_path(path: str) -> str:
     return os.path.join(os.path.dirname(__file__), path)

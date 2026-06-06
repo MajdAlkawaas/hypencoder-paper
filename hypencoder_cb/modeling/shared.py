@@ -102,8 +102,7 @@ class BaseDualEncoder(PreTrainedModel):
 
         if query_input_ids is None and passage_input_ids is None:
             raise ValueError(
-                "At least one of query_input_ids or passage_input_ids"
-                " must be provided"
+                "At least one of query_input_ids or passage_input_ids must be provided"
             )
 
         query_output = None

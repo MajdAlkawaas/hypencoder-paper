@@ -18,9 +18,7 @@ def tokenizer_standard_format_file(
     query_max_length: int = 32,
     item_max_length: int = 512,
     batch_size: int = 1000,
-    query_tokenizer_fn: Optional[
-        Callable[[List[str]], List[List[int]]]
-    ] = None,
+    query_tokenizer_fn: Optional[Callable[[List[str]], List[List[int]]]] = None,
     item_tokenizer_fn: Optional[Callable[[List[str]], List[List[int]]]] = None,
 ) -> None:
     if isinstance(tokenizer, str):

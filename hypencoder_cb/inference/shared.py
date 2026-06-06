@@ -53,12 +53,14 @@ class EncodedItem(BaseDoc):
     representation: NdArray
     id: Optional[str] = None
 
+
 # This is a specific schema for float16 embeddings.
 # We parameterize NdArray with the exact numpy dtype.
 class EncodedItemFloat16(BaseDoc):
     text: str
     representation: NdArray
     id: Optional[str] = None
+
 
 def items_from_ir_dataset(
     ir_dataset_name: str,
@@ -92,9 +94,7 @@ class BaseEncoder:
     def encode(self, text: str) -> BaseEncodedRepresentation:
         raise NotImplementedError()
 
-    def batch_encode(
-        self, texts: List[str]
-    ) -> List[BaseEncodedRepresentation]:
+    def batch_encode(self, texts: List[str]) -> List[BaseEncodedRepresentation]:
         raise NotImplementedError()
 
 
@@ -149,9 +149,7 @@ def encode_jsonl_items_to_disk(
     item_text_key: str = "item_text",
     item_id_key: str = "item_id",
 ) -> None:
-    items = items_from_jsonl(
-        input_path, text_key=item_text_key, id_key=item_id_key
-    )
+    items = items_from_jsonl(input_path, text_key=item_text_key, id_key=item_id_key)
     encode_items_to_disk(encoder, items, output_path, batch_size=batch_size)
 
 
@@ -164,15 +162,13 @@ class BaseRetriever:
     ) -> List[Item]:
         raise NotImplementedError
 
-    def retrieve(
-        self, query: BaseQuery, top_k: Optional[int] = None
-    ) -> List[Item]:
+    def retrieve(self, query: BaseQuery, top_k: Optional[int] = None) -> List[Item]:
         raise NotImplementedError
 
 
 def load_encoded_items_from_disk(
     encoded_items_path: str,
-    target_dtype: str = "float32" # <-- Added new parameter with a default
+    target_dtype: str = "float32",  # <-- Added new parameter with a default
 ) -> Iterable[EncodedItem]:
     print(f"Deserializing corpus with target dtype: {target_dtype}")
 
@@ -180,12 +176,12 @@ def load_encoded_items_from_disk(
     if target_dtype.lower() in ["float16", "fp16"]:
         # If the user wants float16, use the specific float16 schema.
         schema_to_use = EncodedItemFloat16
-        print(f"HERE: float16")
+        print("HERE: float16")
     else:
         # Otherwise, use the default float32 schema.
         schema_to_use = EncodedItem
-        print(f"HERE: float32")
-        
+        print("HERE: float32")
+
     return DocList[schema_to_use].pull(
         f"file://{encoded_items_path}", show_progress=True
     )
@@ -241,8 +237,7 @@ def query_items_to_jsonl(
                 {
                     "query": query_to_json(query),
                     "items": [
-                        item_to_json(item, **item_to_jsonl_kwargs)
-                        for item in items
+                        item_to_json(item, **item_to_jsonl_kwargs) for item in items
                     ],
                 }
             )
@@ -301,6 +296,7 @@ def retrieve_for_ir_dataset_queries(
     track_time_file: Optional[str] = None,
 ) -> None:
     import ir_datasets
+
     print(f"retrieve_for_ir_dataset_queries: saving time in {track_time_file}")
     dataset = ir_datasets.load(ir_dataset_name)
 
@@ -353,11 +349,7 @@ def retrieve_for_jsonl_queries(
         (
             (
                 query,
-                (
-                    max_p_converter(items)
-                    if max_p_converter is not None
-                    else items
-                ),
+                (max_p_converter(items) if max_p_converter is not None else items),
             )
             for query, items in query_items
         ),
