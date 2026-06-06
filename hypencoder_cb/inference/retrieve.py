@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import fire
 import torch
@@ -51,14 +51,14 @@ class HypencoderRetriever(BaseRetriever):
         model_name_or_path: Optional[str] = None,
         model_for_retrieval: Optional[HypencoderDualEncoder] = None,
         preloaded_embeddings: Optional[torch.Tensor] = None,
-        preloaded_ids: Optional[List[str]] = None,
-        preloaded_texts: Optional[List[str]] = None,
+        preloaded_ids: Optional[list[str]] = None,
+        preloaded_texts: Optional[list[str]] = None,
         encoded_item_path: Optional[str] = None,
-        preloaded_encoded_items: Optional[List] = None,  # Added new argument
+        preloaded_encoded_items: Optional[list] = None,  # Added new argument
         batch_size: int = 100_000,
         device: str = "cuda",
         dtype: Union[torch.dtype, str] = "float32",
-        query_model_kwargs: Optional[Dict] = None,
+        query_model_kwargs: Optional[dict] = None,
         put_all_embeddings_on_device: bool = True,  # This will be controlled
         query_max_length: int = 32,
         ignore_same_id: bool = False,
@@ -170,7 +170,7 @@ class HypencoderRetriever(BaseRetriever):
         else:
             raise ValueError("No data source provided.")
 
-    def _process_encoded_items(self, encoded_items: List):
+    def _process_encoded_items(self, encoded_items: list):
         """Helper for the expensive processing of a raw item list."""
         print("INFO: Stacking item representations into a single torch.Tensor...")
         self.encoded_item_embeddings = torch.stack(
@@ -187,7 +187,7 @@ class HypencoderRetriever(BaseRetriever):
             x.text for x in tqdm(encoded_items, desc="Encoded item texts")
         ]
 
-    def retrieve(self, query: TextQuery, top_k: int) -> List[Item]:
+    def retrieve(self, query: TextQuery, top_k: int) -> list[Item]:
         tokenized_query = self.tokenizer(
             query.text,
             return_tensors="pt",
@@ -255,7 +255,7 @@ def do_eval_and_pretty_print(
     output_dir: str,
     ir_dataset_name: Optional[str] = None,
     qrel_json: Optional[str] = None,
-    metric_names: Optional[List[str]] = None,
+    metric_names: Optional[list[str]] = None,
 ) -> None:
     """Does evaluation and pretty prints the retrieval results for easier
     inspection.
@@ -305,7 +305,7 @@ def do_eval_and_pretty_print(
 
 def do_retrieval_shared(
     retriever_cls,
-    retriever_kwargs: Dict,
+    retriever_kwargs: dict,
     output_dir: str,
     ir_dataset_name: Optional[str] = None,
     query_jsonl: Optional[str] = None,
@@ -315,7 +315,7 @@ def do_retrieval_shared(
     top_k: int = 1000,
     include_content: bool = True,
     do_eval: bool = True,
-    metric_names: Optional[List[str]] = None,
+    metric_names: Optional[list[str]] = None,
 ) -> None:
     """Does retrieval and optionally evaluation.
 
@@ -417,11 +417,11 @@ def do_retrieval(
     dtype: str = "fp32",
     top_k: int = 1000,
     batch_size: int = 100_000,
-    retriever_kwargs: Optional[Dict] = None,
+    retriever_kwargs: Optional[dict] = None,
     query_max_length: int = 64,
     include_content: bool = True,
     do_eval: bool = True,
-    metric_names: Optional[List[str]] = None,
+    metric_names: Optional[list[str]] = None,
     ignore_same_id: bool = False,
 ) -> None:
     """Does retrieval and optionally evaluation.

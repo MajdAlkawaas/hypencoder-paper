@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -450,7 +450,7 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
 
     def __init__(
         self,
-        matryoshka_dims: List[int],
+        matryoshka_dims: list[int],
         q_net_converter: "RepeatedDenseBlockConverter",
         **kwargs,
     ):

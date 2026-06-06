@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import torch
 from transformers import AutoTokenizer
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def positive_filter_factory(
     type: str, **kwargs
-) -> Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]]:
+) -> Callable[[list[dict[str, Any]]], list[dict[str, Any]]]:
     if type == "type":
         return lambda items: [
             item for item in items if item.get("type", "") == kwargs["positive_type"]
@@ -29,7 +29,7 @@ def positive_filter_factory(
 
 def sampler_factory(
     type: str, num_samples, **kwargs
-) -> Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]]:
+) -> Callable[[list[dict[str, Any]]], list[dict[str, Any]]]:
     if type == "random":
         return lambda items: random.sample(items, k=num_samples)
     elif type == "all":
@@ -44,25 +44,25 @@ class GeneralDualEncoderCollator:
         # --- ADD NEW PARAMETER ---
         log_level: bool = False,
         positive_filter: Union[
-            Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
+            Callable[[list[dict[str, Any]]], list[dict[str, Any]]], str
         ] = "type",
         positive_sampler: Union[
-            Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
+            Callable[[list[dict[str, Any]]], list[dict[str, Any]]], str
         ] = "random",
         negative_sampler: Union[
-            Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
+            Callable[[list[dict[str, Any]]], list[dict[str, Any]]], str
         ] = "random",
         num_positives_to_sample: int = 1,
         label_key: Optional[str] = "score",
-        positive_filter_kwargs: Optional[Dict[str, Any]] = None,
-        positive_sampler_kwargs: Optional[Dict[str, Any]] = None,
-        negative_sampler_kwargs: Optional[Dict[str, Any]] = None,
+        positive_filter_kwargs: Optional[dict[str, Any]] = None,
+        positive_sampler_kwargs: Optional[dict[str, Any]] = None,
+        negative_sampler_kwargs: Optional[dict[str, Any]] = None,
         random_seed: int = 42,
         query_padding_mode: str = "longest",
         query_max_length: Optional[int] = None,
-        modify_query: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
-        query_pad_kwargs: Optional[Dict[str, Any]] = None,
-        item_pad_kwargs: Optional[Dict[str, Any]] = None,
+        modify_query: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
+        query_pad_kwargs: Optional[dict[str, Any]] = None,
+        item_pad_kwargs: Optional[dict[str, Any]] = None,
     ):
 
         self.log_level = log_level  # <-- STORE THE FLAG
@@ -118,7 +118,7 @@ class GeneralDualEncoderCollator:
         self.query_pad_kwargs = query_pad_kwargs
         self.item_pad_kwargs = item_pad_kwargs
 
-    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def __call__(self, features: list[dict[str, Any]]) -> dict[str, Any]:
 
         # --- USE THE FLAG TO CONTROL LOGGING ---
         if self.log_level:

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import fire
 import torch
@@ -60,7 +60,7 @@ class InferenceTextEncoder(BaseEncoder):
         self.device = device
         self.max_length = max_length
 
-    def batch_encode(self, texts: List[str]) -> VectorEncodedRepresentation:
+    def batch_encode(self, texts: list[str]) -> VectorEncodedRepresentation:
         """
 
         Args:

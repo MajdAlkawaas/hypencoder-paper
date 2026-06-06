@@ -3,7 +3,7 @@ import pickle
 import random
 from collections import defaultdict
 from queue import PriorityQueue
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import fire
 import torch
@@ -174,7 +174,7 @@ class HypecoderGraphRetriever(BaseRetriever):
         ]
         self.entry_point_ids = [self.ids[idx] for idx in self.entry_point_indices]
 
-    def retrieve(self, query: TextQuery, top_k: int) -> List[Item]:
+    def retrieve(self, query: TextQuery, top_k: int) -> list[Item]:
         tokenized_query = self.tokenizer(
             query.text,
             return_tensors="pt",
@@ -283,11 +283,11 @@ def do_retrieval(
     dtype: str = "fp32",
     top_k: int = 1000,
     batch_size: int = 100_000,
-    retriever_kwargs: Optional[Dict] = None,
+    retriever_kwargs: Optional[dict] = None,
     query_max_length: int = 64,
     include_content: bool = True,
     do_eval: bool = True,
-    metric_names: Optional[List[str]] = None,
+    metric_names: Optional[list[str]] = None,
     ignore_same_id: bool = False,
 ) -> None:
     """Does retrieval and optionally evaluation.

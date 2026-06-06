@@ -1,7 +1,6 @@
 import glob
 import os
 from pathlib import Path
-from typing import List
 
 import fire
 import torch
@@ -39,8 +38,8 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
         model_object: HypencoderDualEncoder,
         tokenizer_object: AutoTokenizer,
         embeddings_tensor: torch.Tensor,
-        ids_list: List[str],
-        texts_list: List[str],
+        ids_list: list[str],
+        texts_list: list[str],
         batch_size: int,
         dtype: str,
         put_all_embeddings_on_device: bool,  # CHANGE
@@ -93,7 +92,7 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
 
     # This is a class specific definition of the retrieve method which
     # overrides the definition of the parent class retrieve method
-    def retrieve(self, query: "TextQuery", top_k: int) -> List["Item"]:
+    def retrieve(self, query: "TextQuery", top_k: int) -> list["Item"]:
         """
         Overrides the parent retrieve method to use a truncated q-net.
         """
@@ -250,7 +249,7 @@ def evaluate_matryoshka_checkpoints(
     training_run_dir: str,
     encoded_item_path: str,
     ir_dataset_name: str,
-    matryoshka_dims: List[int],
+    matryoshka_dims: list[int],
     base_output_dir: str,
     original_model_name: str = "jfkback/hypencoder.6_layer",
     dtype: str = "float32",
