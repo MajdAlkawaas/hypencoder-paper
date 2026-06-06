@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -25,7 +25,7 @@ def scaled_dot_product_attention(
     value: torch.Tensor,
     dim: int,
     mask: Optional[torch.Tensor] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     score = torch.einsum("bqd,bkd->bqk", query, key) / math.sqrt(dim)
 
     if mask is not None:
@@ -42,7 +42,7 @@ class HypencoderConfig(PretrainedConfig):
         self,
         model_name_or_path: str = "",
         freeze_transformer: bool = False,
-        converter_kwargs: Dict = {},
+        converter_kwargs: dict = {},
         embedding_representation: Optional[str] = None,
         base_encoder_output_dim: int = 768,
         **kwargs,
@@ -187,7 +187,7 @@ class Hypencoder(PreTrainedModel):
 
     def _get_weights_and_biases(
         self, last_hidden_state: torch.Tensor, attention_mask: torch.Tensor
-    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
         """From the last hidden state of the transformer model and the
         attention mask, compute the weights and biases for the q-net.
 

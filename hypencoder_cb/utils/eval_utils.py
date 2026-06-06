@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 from numbers import Number
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import ir_measures
 
@@ -22,7 +22,7 @@ DEFAULT_METRICS = [
 
 def pretty_print_aggregated_metrics(
     aggregated_metrics_json: str,
-    metric_name_ordering: Optional[List[str]] = None,
+    metric_name_ordering: Optional[list[str]] = None,
 ) -> str:
     with open(aggregated_metrics_json) as f:
         aggregated_metrics = json.load(f)
@@ -57,7 +57,7 @@ def pretty_print_aggregated_metrics(
 def pretty_print_aggregated_metrics_to_file(
     aggregated_metrics_json: str,
     output_file: Optional[str] = None,
-    metric_name_ordering: Optional[List[str]] = None,
+    metric_name_ordering: Optional[list[str]] = None,
 ) -> None:
     if output_file is None:
         output_file = Path(aggregated_metrics_json).with_suffix(".txt")
@@ -72,10 +72,10 @@ def pretty_print_aggregated_metrics_to_file(
 
 
 def calculate_metrics(
-    run: Dict[str, Dict[str, Number]],
-    qrels: Dict[str, Dict[str, Number]],
-    metric_names: Optional[List[str]] = None,
-) -> Tuple[Dict[str, Number], Dict[str, Dict[str, Number]]]:
+    run: dict[str, dict[str, Number]],
+    qrels: dict[str, dict[str, Number]],
+    metric_names: Optional[list[str]] = None,
+) -> tuple[dict[str, Number], dict[str, dict[str, Number]]]:
     if metric_names is None:
         metric_names = DEFAULT_METRICS
 
@@ -90,10 +90,10 @@ def calculate_metrics(
 
 
 def calculate_metrics_to_file(
-    run: Dict[str, Dict[str, Number]],
-    qrels: Dict[str, Dict[str, Number]],
+    run: dict[str, dict[str, Number]],
+    qrels: dict[str, dict[str, Number]],
     output_folder: str,
-    metric_names: Optional[List[str]] = None,
+    metric_names: Optional[list[str]] = None,
 ) -> None:
     aggregated_metrics, per_query_metrics = calculate_metrics(
         run, qrels, metric_names=metric_names
@@ -129,7 +129,7 @@ def calculate_metrics_to_file(
 def load_standard_format_as_run(
     input_jsonl: str,
     score_key: str = "score",
-) -> Dict[str, Dict[str, Number]]:
+) -> dict[str, dict[str, Number]]:
     """
     Load the standard format as a run.
 

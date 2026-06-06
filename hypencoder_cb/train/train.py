@@ -22,6 +22,7 @@ from hypencoder_cb.train.args import (
     HypencoderModelConfig,
     HypencoderTrainerConfig,
     HypencoderTrainingConfig,
+    LoggingConfig,
 )
 from hypencoder_cb.train.data_collator import GeneralDualEncoderCollator
 
@@ -87,7 +88,8 @@ def reinitialize_hyper_head(model: nn.Module):
                 )
                 if len(param_list) < expected_len:
                     logging.warning(
-                        f"{layer_name} has fewer parameters ({len(param_list)}) than expected ({expected_len})"
+                        f"{layer_name} has fewer parameters ({len(param_list)}) "
+                        f"than expected ({expected_len})"
                     )
                 for i in range(min(len(param_list), expected_len)):
                     param = param_list[i]
@@ -117,7 +119,8 @@ def reinitialize_hyper_head(model: nn.Module):
                 )
                 if len(param_list) < expected_len:
                     logger.warning(
-                        f"{layer_name} has fewer parameters ({len(param_list)}) than expected ({expected_len})"
+                        f"{layer_name} has fewer parameters ({len(param_list)}) "
+                        f"than expected ({expected_len})"
                     )
                 for i in range(min(len(param_list), expected_len)):
                     param = param_list[i]
@@ -178,7 +181,8 @@ def load_model(model_config: HypencoderModelConfig):
     if model_config.checkpoint_path is not None:
         # --- FLAG ---
         logging.info(
-            f"FLAG: [load_model] Loading pre-trained model from checkpoint: {model_config.checkpoint_path}"
+            "FLAG: [load_model] Loading pre-trained model from checkpoint: "
+            f"{model_config.checkpoint_path}"
         )
         model = model_cls.from_pretrained(model_config.checkpoint_path, config=config)
 
@@ -226,7 +230,8 @@ def load_data(data_config: HypencoderDataConfig):
     if data_config.training_huggingface_dataset is not None:
         # --- FLAG ---
         logger.info(
-            f"FLAG: [load_data] Loading training data from Hugging Face dataset: {data_config.training_huggingface_dataset}"
+            "FLAG: [load_data] Loading training data from Hugging Face dataset: "
+            f"{data_config.training_huggingface_dataset}"
         )
         training_data = load_dataset(
             data_config.training_huggingface_dataset,
@@ -236,7 +241,8 @@ def load_data(data_config: HypencoderDataConfig):
     elif data_config.training_data_jsonl is not None:
         # --- FLAG ---
         logger.info(
-            f"FLAG: [load_data] Loading training data from local JSONL file: {data_config.training_data_jsonl}"
+            "FLAG: [load_data] Loading training data from local JSONL file: "
+            f"{data_config.training_data_jsonl}"
         )
         training_data = load_dataset(
             "json",
@@ -247,14 +253,16 @@ def load_data(data_config: HypencoderDataConfig):
 
     # --- FLAG ---
     logger.info(
-        f"FLAG: [load_data] Training data loaded. Number of samples: {len(training_data)}"
+        "FLAG: [load_data] Training data loaded. "
+        f"Number of samples: {len(training_data)}"
     )
 
     validation_data = None
     if data_config.validation_huggingface_dataset is not None:
         # --- FLAG ---
         logger.info(
-            f"FLAG: [load_data] Loading validation data from Hugging Face dataset: {data_config.validation_huggingface_dataset}"
+            "FLAG: [load_data] Loading validation data from Hugging Face dataset: "
+            f"{data_config.validation_huggingface_dataset}"
         )
         # TODO: This might be wrong, i think it should not be assinged to training
         training_data = load_dataset(
@@ -265,7 +273,8 @@ def load_data(data_config: HypencoderDataConfig):
     elif data_config.validation_data_jsonl is not None:
         # --- FLAG ---
         logger.info(
-            f"FLAG: [load_data] Loading validation data from local JSONL file: {data_config.validation_data_jsonl}"
+            "FLAG: [load_data] Loading validation data from local JSONL file: "
+            f"{data_config.validation_data_jsonl}"
         )
         # TODO: This might be wrong, i think it should not be assinged to training
         training_data = load_dataset(
@@ -307,7 +316,8 @@ def load_tokenizer(model_config: HypencoderModelConfig):
     # --- FLAG ---
     logger.info("\n--- STAGE: Loading Tokenizer ---")
     logger.info(
-        f"FLAG: [load_tokenizer] Loading tokenizer: {model_config.tokenizer_pretrained_model_name_or_path}"
+        "FLAG: [load_tokenizer] Loading tokenizer: "
+        f"{model_config.tokenizer_pretrained_model_name_or_path}"
     )
     return AutoTokenizer.from_pretrained(
         model_config.tokenizer_pretrained_model_name_or_path
@@ -321,7 +331,8 @@ def train_model(cfg: HypencoderTrainingConfig):
 
     logging.basicConfig(
         level=log_level,
-        format="%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s",
+        format="%(asctime)s - %(levelname)s - %(filename)s - "
+        "%(funcName)s - %(message)s",
         stream=sys.stdout,
     )
 
@@ -433,7 +444,10 @@ def run_training(config_path: Optional[str] = None) -> None:
     else:
         config = schema
     # --- FLAG ---
-    # print("FLAG: [run_training] Configuration parsed successfully. Starting model training...")
+    # print(
+    #     "FLAG: [run_training] Configuration parsed successfully. "
+    #     "Starting model training..."
+    # )
     train_model(config)
 
 

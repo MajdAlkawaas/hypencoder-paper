@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import fire
 from omegaconf import OmegaConf
@@ -22,8 +22,8 @@ class LoggingConfig:
 class HypencoderModelConfig:
     tokenizer_pretrained_model_name_or_path: Optional[str] = None
 
-    query_encoder_kwargs: Dict = field(default_factory=dict)
-    passage_encoder_kwargs: Dict = field(default_factory=dict)
+    query_encoder_kwargs: dict = field(default_factory=dict)
+    passage_encoder_kwargs: dict = field(default_factory=dict)
 
     # Union[str, List[str]]
     loss_type: Any = field(default_factory=lambda: [])
@@ -48,7 +48,7 @@ class HypencoderDataConfig:
     validation_data_split: str = "train"
 
     positive_filter_type: str = "first"
-    positive_filter_kwargs: Optional[Dict[str, Any]] = None
+    positive_filter_kwargs: Optional[dict[str, Any]] = None
 
     label_key: Optional[str] = "score"
 
@@ -111,7 +111,7 @@ class HFTrainerConfig:
     ddp_find_unused_parameters: Optional[bool] = True
     # str or bool string options are: "full_shard", "auto_wrap", ...
     fsdp: Any = False
-    fsdp_config: Optional[Dict[str, Any]] = None
+    fsdp_config: Optional[dict[str, Any]] = None
 
     report_to: str = "none"
 

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -152,7 +152,7 @@ def activation_factory(
 class RepeatedDenseBlockConverter:
     def __init__(
         self,
-        vector_dimensions: List[int],
+        vector_dimensions: list[int],
         activation_type: str = "relu",
         do_dropout: bool = False,
         dropout_prob: float = 0.1,
@@ -217,8 +217,8 @@ class RepeatedDenseBlockConverter:
 
     def __call__(
         self,
-        matrices: List[torch.Tensor],
-        vectors: List[torch.Tensor],
+        matrices: list[torch.Tensor],
+        vectors: list[torch.Tensor],
         is_training: bool,
     ) -> NoTorchSequential:
         """

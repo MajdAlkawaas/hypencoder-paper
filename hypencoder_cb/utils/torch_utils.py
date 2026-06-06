@@ -18,7 +18,8 @@ def dtype_lookup(dtype: str):
     }
     if clean_dtype not in dtype_lookup:
         raise KeyError(
-            f"Unsupported dtype '{dtype}'. Supported values are: {list(dtype_lookup.keys())}"
+            f"Unsupported dtype '{dtype}'. Supported values are: "
+            f"{list(dtype_lookup.keys())}"
         )
 
     return dtype_lookup[clean_dtype]

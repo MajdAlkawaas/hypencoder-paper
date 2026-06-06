@@ -71,12 +71,13 @@ def evaluate_all_checkpoints(
         output_dir_for_checkpoint = Path(base_output_dir) / checkpoint_name
         output_dir_for_checkpoint.mkdir(parents=True, exist_ok=True)
 
-        # =================================================================================
+        # =========================================================================
         # LOGIC FOR BATCHED RETRIEVAL
         # The key is `put_all_embeddings_on_device=False`. This tells the retriever
         # to keep the preloaded_encoded_items in CPU RAM and only move small
-        # batches (of size `batch_size`) to the GPU for scoring. This prevents OOM errors.
-        # =================================================================================
+        # batches (of size `batch_size`) to the GPU for scoring. This prevents
+        # OOM errors.
+        # =========================================================================
         retriever = HypencoderRetriever(
             model_name_or_path=checkpoint_path,
             encoded_item_path=None,
