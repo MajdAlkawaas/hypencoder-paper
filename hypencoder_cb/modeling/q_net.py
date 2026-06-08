@@ -4,7 +4,6 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor
 
 
 class NoTorchSequential:
@@ -24,13 +23,13 @@ class NoTorchSequential:
 
 
 class NoTorchLinear:
-    def __init__(self, weight, bias: Optional[torch.Tensor] = None):
+    def __init__(self, weight, bias: torch.Tensor | None = None):
         """
         Args:
             weight (torch.Tensor): Torch tensor that represents the weights
                 of the linear function with the shape:
                     (num_queries, input_hidden_size, output_hidden_size)
-            bias (Optional[torch.Tensor], optional): Optional torch tensor
+            bias (torch.Tensor | None, optional): Optional torch tensor
                 that represents the bias of the linear function with the shape:
                     (num_queries, output_hidden_size).
                 Defaults to None.
@@ -64,8 +63,8 @@ class NoTorchDenseBlock:
     def __init__(
         self,
         weight: torch.Tensor,
-        bias: Optional[torch.Tensor] = None,
-        activation: Optional[torch.nn.Module] = None,
+        bias: torch.Tensor | None = None,
+        activation: torch.nn.Module | None = None,
         do_layer_norm: bool = False,
         do_residual: bool = False,
         do_dropout: bool = False,
@@ -76,11 +75,11 @@ class NoTorchDenseBlock:
         Args:
             weight (torch.Tensor): The weight matrices with the shape:
                 (num_queries, input_hidden_size, output_hidden_size)
-            bias (Optional[torch.Tensor], optional): Optional bias vectors
+            bias (torch.Tensor | None, optional): Optional bias vectors
                 with the shape:
                     (num_queries, output_hidden_size).
                 Defaults to None.
-            activation (Optional[torch.nn.Module], optional): The activation
+            activation (torch.nn.Module | None, optional): The activation
                 function to use. Defaults to None.
             do_layer_norm (bool, optional): Whether to apply layer norm.
                 Defaults to False.
@@ -244,15 +243,15 @@ class RepeatedDenseBlockConverter:
 
     def __call__(
         self,
-        matrices: list[Tensor],
-        vectors: list[Tensor],
+        matrices: list[torch.Tensor],
+        vectors: list[torch.Tensor],
         is_training: bool,
     ) -> NoTorchSequential:
         """
         Args:
-            matrices (List[torch.Tensor]): The weight matrices with the shapes:
+            matrices (list[torch.Tensor]): The weight matrices with the shapes:
                 (num_queries, input_hidden_size, output_hidden_size)
-            vectors (List[torch.Tensor]): The bias vectors with the shapes:
+            vectors (list[torch.Tensor]): The bias vectors with the shapes:
                 (num_queries, output_hidden_size, 1)
             is_training (bool): Whether the model is in training mode.
 
@@ -305,27 +304,27 @@ class MatryoshkaQNetFactory:
 
     def _truncate_parameters(
         self,
-        weights_matrices: list[Tensor],
-        bias_vectors: list[Tensor],
+        weights_matrices: list[torch.Tensor],
+        bias_vectors: list[torch.Tensor],
         dim_in: int,
         dim_hidden: int,
         dim_out: int,
-    ) -> tuple[list[Tensor], list[Tensor]]:
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
         """
         Helper to truncate weights and biases for a specific Matryoshka dimension.
 
         Args:
-            matrices (List[torch.Tensor]): The weight matrices with the shapes:
+            weight_matrices (list[torch.Tensor]): The weight matrices with the shapes:
 
-            vectors (List[torch.Tensor]): The bias vectors with the shapes:
+            bias_vectors (list[torch.Tensor]): The bias vectors with the shapes:
 
             dim_in (int): The dimension of the input vectors.
             dim_hidden (int): The dimension of the hidden vectors.
             dim_out (int): The dimension of the output vectors.
 
         Returns:
-            tuple[list[Tensor], list[Tensor]]: A tuple of the truncated weight matrices
-                and bias vectors.
+            tuple[list[torch.Tensor], list[torch.Tensor]]: A tuple of the truncated 
+            weight matrices and bias vectors.
         """
         truncated_matrices = []
 
@@ -349,18 +348,18 @@ class MatryoshkaQNetFactory:
 
     def build(
         self,
-        weight_matrices: list[Tensor],
-        bias_vectors: list[Tensor],
+        weight_matrices: list[torch.Tensor],
+        bias_vectors: list[torch.Tensor],
         matryoshka_dims: list[int],
         is_training: bool,
     ):
         """
         Args:
-            weight_matrices (List[torch.Tensor]): The weight matrices with the shapes:
+            weight_matrices (list[torch.Tensor]): The weight matrices with the shapes:
 
-            bias_vectors (List[torch.Tensor]): The bias vectors with the shapes:
+            bias_vectors (list[torch.Tensor]): The bias vectors with the shapes:
 
-            matryoshka_dims (List[int]): The dimensions of the matryoshka layers.
+            matryoshka_dims (list[int]): The dimensions of the matryoshka layers.
             is_training (bool): Whether the model is in training mode.
 
         Returns:

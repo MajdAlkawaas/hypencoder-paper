@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import fire
 import torch
@@ -30,15 +30,15 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 class HypencoderRetriever(BaseRetriever):
     # Data source arguments
-    # encoded_item_path: Optional[str] = None,
-    # preloaded_embeddings: Optional[torch.Tensor] = None,
-    # preloaded_ids: Optional[List[str]] = None,
-    # preloaded_texts: Optional[List[str]] = None,
-    # preloaded_encoded_items: Optional[List] = None,
+    # encoded_item_path: str | None = None,
+    # preloaded_embeddings: torch.Tensor | None = None,
+    # preloaded_ids: list[str] | None = None,
+    # preloaded_texts: list[str] | None = None,
+    # preloaded_encoded_items: list | None = None,
 
     # # Model and config arguments
     # model_name_or_path: str = None,
-    # model_for_retrieval: Optional[HypencoderDualEncoder] = None,
+    # model_for_retrieval: HypencoderDualEncoder | None = None,
     # batch_size: int = 100_000,
     # device: str = "cuda",
     # dtype: str = "float32",
@@ -48,17 +48,17 @@ class HypencoderRetriever(BaseRetriever):
 
     def __init__(
         self,
-        model_name_or_path: Optional[str] = None,
-        model_for_retrieval: Optional[HypencoderDualEncoder] = None,
-        preloaded_embeddings: Optional[torch.Tensor] = None,
-        preloaded_ids: Optional[list[str]] = None,
-        preloaded_texts: Optional[list[str]] = None,
-        encoded_item_path: Optional[str] = None,
-        preloaded_encoded_items: Optional[list] = None,  # Added new argument
+        model_name_or_path: str | None = None,
+        model_for_retrieval: HypencoderDualEncoder | None = None,
+        preloaded_embeddings: torch.Tensor | None = None,
+        preloaded_ids: list[str] | None = None,
+        preloaded_texts: list[str] | None = None,
+        encoded_item_path: str | None = None,
+        preloaded_encoded_items: list | None = None,  # Added new argument
         batch_size: int = 100_000,
         device: str = "cuda",
         dtype: Union[torch.dtype, str] = "float32",
-        query_model_kwargs: Optional[dict] = None,
+        query_model_kwargs: dict | None = None,
         put_all_embeddings_on_device: bool = True,  # This will be controlled
         query_max_length: int = 32,
         ignore_same_id: bool = False,
@@ -74,7 +74,7 @@ class HypencoderRetriever(BaseRetriever):
             dtype (Union[torch.dtype, str], optional): The dtype to use for the
                 model and embedded items. Options are "fp16", "fp32", and
                 "bf16". Defaults to "float32".
-            query_model_kwargs (Optional[Dict], optional): Key-word arguments
+            query_model_kwargs (dict | None, optional): Key-word arguments
                 passed to the q-net in addition to the item representations.
                 Defaults to None.
             put_all_embeddings_on_device (bool, optional): Whether all
@@ -253,9 +253,9 @@ class HypencoderRetriever(BaseRetriever):
 def do_eval_and_pretty_print(
     retrieval_path: str,
     output_dir: str,
-    ir_dataset_name: Optional[str] = None,
-    qrel_json: Optional[str] = None,
-    metric_names: Optional[list[str]] = None,
+    ir_dataset_name: str | None = None,
+    qrel_json: str | None = None,
+    metric_names: list[str] | None = None,
 ) -> None:
     """Does evaluation and pretty prints the retrieval results for easier
     inspection.
@@ -263,15 +263,14 @@ def do_eval_and_pretty_print(
     Args:
         retrieval_path (str): Path to the retrieval JSONL file.
         output_dir (str): Path to the output directory.
-        ir_dataset_name (Optional[str], optional): If provided is used to
-            get the qrels used for evaluation. If None, then `qrel_json` must
-            be provided. Defaults to None.
-        qrel_json (Optional[str], optional): If provided is used as the qrels
-            for evaluation. If None, then `qrel_json` must
-            be provided. Defaults to None.
-        metric_names (Optional[List[str]], optional): A list of metrics to
-            compute. These are passed to IR-Measures so should be compatible.
-            If None, a default set of metrics is found. Defaults to None.
+        ir_dataset_name (str | None): If provided is used to get the qrels used
+            for evaluation. If None, then `qrel_json` must be provided. Defaults
+            to None.
+        qrel_json (str | None): If provided is used as the qrels for evaluation.
+            If None, then `qrel_json` must be provided. Defaults to None.
+        metric_names (list[str] | None): A list of metrics to compute. These are
+            passed to IR-Measures so should be compatible. If None, a default set
+            of metrics is found. Defaults to None.
 
     Raises:
         ValueError: If both `ir_dataset_name` and `qrel_json` are provided.
@@ -307,31 +306,31 @@ def do_retrieval_shared(
     retriever_cls,
     retriever_kwargs: dict,
     output_dir: str,
-    ir_dataset_name: Optional[str] = None,
-    query_jsonl: Optional[str] = None,
-    qrel_json: Optional[str] = None,
+    ir_dataset_name: str | None = None,
+    query_jsonl: str | None = None,
+    qrel_json: str | None = None,
     query_id_key: str = "id",
     query_text_key: str = "text",
     top_k: int = 1000,
     include_content: bool = True,
     do_eval: bool = True,
-    metric_names: Optional[list[str]] = None,
+    metric_names: list[str] | None = None,
 ) -> None:
     """Does retrieval and optionally evaluation.
 
     Args:
         retriever_cls (BaseRetriever): The retriever class to use.
-        retriever_kwargs (Dict): The keyword arguments to pass to the retriever.
+        retriever_kwargs (dict): The keyword arguments to pass to the retriever.
         output_dir (str): Path to the output directory which will contain the
             retrieval results and optionally the evaluation results.
-        ir_dataset_name (Optional[str], optional): If provided is used to
+        ir_dataset_name (str | None, optional): If provided is used to
             get the queries used for retrieval and qrels used for evaluation.
             If None, then `query_jsonl` must be provided and `qrel_json` must
             be provided if `do_eval` is True. Defaults to None.
-        query_jsonl (Optional[str], optional): If provided is used as the
+        query_jsonl (str | None, optional): If provided is used as the
             queries for retrieval. If None, then `ir_dataset_name` must
             be provided. Defaults to None.
-        qrel_json (Optional[str], optional): If provided is used as the qrels
+        qrel_json (str | None, optional): If provided is used as the qrels
             for evaluation. If None, then `ir_dataset_name` must
             be provided. Defaults to None.
         query_id_key (str, optional): The key in `query_jsonl` for the
@@ -342,12 +341,12 @@ def do_retrieval_shared(
             "text".
         top_k (int, optional): The number of top items to retrieve. Defaults to
             1000.
-        retriever_kwargs (Optional[Dict], optional): Additional keyword
+        retriever_kwargs (dict | None, optional): Additional keyword
             arguments to pass to the retriever. Defaults to None.
         include_content (bool, optional): Whether to include the content of the
             retrieved items in the output. Defaults to True.
         do_eval (bool, optional): Whether to do evaluation. Defaults to True.
-        metric_names (Optional[List[str]], optional): A list of metrics to
+        metric_names (list[str] | None, optional): A list of metrics to
             compute. These are passed to IR-Measures so should be compatible.
             If None, a default set of metrics is found. Defaults to None.
     Raises:
@@ -409,19 +408,19 @@ def do_retrieval(
     model_name_or_path: str,
     encoded_item_path: str,
     output_dir: str,
-    ir_dataset_name: Optional[str] = None,
-    query_jsonl: Optional[str] = None,
-    qrel_json: Optional[str] = None,
+    ir_dataset_name: str | None = None,
+    query_jsonl: str | None = None,
+    qrel_json: str | None = None,
     query_id_key: str = "id",
     query_text_key: str = "text",
     dtype: str = "fp32",
     top_k: int = 1000,
     batch_size: int = 100_000,
-    retriever_kwargs: Optional[dict] = None,
+    retriever_kwargs: dict | None = None,
     query_max_length: int = 64,
     include_content: bool = True,
     do_eval: bool = True,
-    metric_names: Optional[list[str]] = None,
+    metric_names: list[str] | None = None,
     ignore_same_id: bool = False,
 ) -> None:
     """Does retrieval and optionally evaluation.
@@ -432,14 +431,14 @@ def do_retrieval(
         encoded_item_path (str): Path to the encoded items.
         output_dir (str): Path to the output directory which will contain the
             retrieval results and optionally the evaluation results.
-        ir_dataset_name (Optional[str], optional): If provided is used to
+        ir_dataset_name (str | None): If provided is used to
             get the queries used for retrieval and qrels used for evaluation.
             If None, then `query_jsonl` must be provided and `qrel_json` must
             be provided if `do_eval` is True. Defaults to None.
-        query_jsonl (Optional[str], optional): If provided is used as the
+        query_jsonl (str | None, optional): If provided is used as the
             queries for retrieval. If None, then `ir_dataset_name` must
             be provided. Defaults to None.
-        qrel_json (Optional[str], optional): If provided is used as the qrels
+        qrel_json (str | None, optional): If provided is used as the qrels
             for evaluation. If None, then `ir_dataset_name` must
             be provided. Defaults to None.
         query_id_key (str, optional): The key in `query_jsonl` for the
@@ -454,14 +453,14 @@ def do_retrieval(
             1000.
         batch_size (int, optional): The batch size to use for retrieval.
             Defaults to 100,000.
-        retriever_kwargs (Optional[Dict], optional): Additional keyword
+        retriever_kwargs (dict | None, optional): Additional keyword
             arguments to pass to the retriever. Defaults to None.
         query_max_length (int, optional): Maximum length of the query.
             Defaults to 64.
         include_content (bool, optional): Whether to include the content of the
             retrieved items in the output. Defaults to True.
         do_eval (bool, optional): Whether to do evaluation. Defaults to True.
-        metric_names (Optional[List[str]], optional): A list of metrics to
+        metric_names (list[str] | None, optional): A list of metrics to
             compute. These are passed to IR-Measures so should be compatible.
             If None, a default set of metrics is found. Defaults to None.
         ignore_same_id (bool, optional): Whether to ignore retrievals with the
