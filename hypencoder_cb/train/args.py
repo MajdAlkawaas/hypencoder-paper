@@ -128,18 +128,22 @@ class HFTrainerConfig:
 
 @dataclass
 class HypencoderTrainerConfig:
-    hf_trainer_config: HFTrainerConfig = HFTrainerConfig(output_dir="/tmp/output/")
+    hf_trainer_config: HFTrainerConfig = field(
+        default_factory=lambda: HFTrainerConfig(output_dir="/tmp/output/")
+    )
     resume_from_checkpoint: Optional[Any] = False
 
 
 @dataclass
 class HypencoderTrainingConfig:
-    model_config: HypencoderModelConfig = HypencoderModelConfig()
-    data_config: HypencoderDataConfig = HypencoderDataConfig(
-        training_data_jsonl="",
+    model_config: HypencoderModelConfig = field(default_factory=HypencoderModelConfig)
+    data_config: HypencoderDataConfig = field(
+        default_factory=lambda: HypencoderDataConfig(training_data_jsonl="")
     )
-    trainer_config: HypencoderTrainerConfig = HypencoderTrainerConfig(
-        hf_trainer_config=HFTrainerConfig(),
+    trainer_config: HypencoderTrainerConfig = field(
+        default_factory=lambda: HypencoderTrainerConfig(
+            hf_trainer_config=HFTrainerConfig()
+        )
     )
     # Added the logging configs
     logging_config: LoggingConfig = field(default_factory=LoggingConfig)

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Union
 
 import fire
 import torch
@@ -29,35 +28,14 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
 class HypencoderRetriever(BaseRetriever):
-    # Data source arguments
-    # encoded_item_path: str | None = None,
-    # preloaded_embeddings: torch.Tensor | None = None,
-    # preloaded_ids: list[str] | None = None,
-    # preloaded_texts: list[str] | None = None,
-    # preloaded_encoded_items: list | None = None,
-
-    # # Model and config arguments
-    # model_name_or_path: str = None,
-    # model_for_retrieval: HypencoderDualEncoder | None = None,
-    # batch_size: int = 100_000,
-    # device: str = "cuda",
-    # dtype: str = "float32",
-    # put_all_embeddings_on_device: bool = True,
-    # query_max_length: int = 32,
-    # ignore_same_id: bool = False,
-
     def __init__(
         self,
-        model_name_or_path: str | None = None,
-        model_for_retrieval: HypencoderDualEncoder | None = None,
-        preloaded_embeddings: torch.Tensor | None = None,
-        preloaded_ids: list[str] | None = None,
-        preloaded_texts: list[str] | None = None,
+        model_name_or_path: str,
         encoded_item_path: str | None = None,
         preloaded_encoded_items: list | None = None,  # Added new argument
         batch_size: int = 100_000,
         device: str = "cuda",
-        dtype: Union[torch.dtype, str] = "float32",
+        dtype: torch.dtype | str = "float32",
         query_model_kwargs: dict | None = None,
         put_all_embeddings_on_device: bool = True,  # This will be controlled
         query_max_length: int = 32,
@@ -71,7 +49,7 @@ class HypencoderRetriever(BaseRetriever):
             batch_size (int, optional): Batch sized used for scoring. Defaults
                 to 100,000.
             device (str, optional): The device to use. Defaults to "cuda".
-            dtype (Union[torch.dtype, str], optional): The dtype to use for the
+            dtype (torch.dtype | str, optional): The dtype to use for the
                 model and embedded items. Options are "fp16", "fp32", and
                 "bf16". Defaults to "float32".
             query_model_kwargs (dict | None, optional): Key-word arguments
@@ -108,17 +86,27 @@ class HypencoderRetriever(BaseRetriever):
 
         # --- REFACTORED INITIALIZATION ---
 
-        # 1. Load the model and tokenizer
-        self._load_model_and_tokenizer(model_name_or_path, model_for_retrieval)
+        # print("Started loading encoded items...")
+        # encoded_items = load_encoded_items_from_disk(
+        #     encoded_item_path,
+        # )
 
-        # 2. Load and process the document corpus
-        self._load_and_process_data(
-            encoded_item_path=encoded_item_path,
-            preloaded_embeddings=preloaded_embeddings,
-            preloaded_ids=preloaded_ids,
-            preloaded_texts=preloaded_texts,
-            preloaded_encoded_items=preloaded_encoded_items,
-        )
+        # Modified the loading of the encoded data
+        if preloaded_encoded_items is not None:
+            print("INFO: Using pre-loaded encoded items from memory.")
+            encoded_items = preloaded_encoded_items
+        elif encoded_item_path is not None:
+            print("INFO: Loading encoded items from disk...")
+            # We need to pass the dtype here to ensure correct loading
+            # Assuming fp16 if not specified, as that's the context of this problem
+            # The calling script will handle the dtype logic.
+            encoded_items = load_encoded_items_from_disk(
+                encoded_item_path, target_dtype=self.dtype.__str__().split(".")[-1]
+            )
+        else:
+            raise ValueError(
+                "Must provide either 'encoded_item_path' or 'preloaded_encoded_items'."
+            )
 
         # 3. Move embeddings to GPU if requested
         if self.put_on_device and self.encoded_item_embeddings is not None:
@@ -186,6 +174,12 @@ class HypencoderRetriever(BaseRetriever):
         self.encoded_item_texts = [
             x.text for x in tqdm(encoded_items, desc="Encoded item texts")
         ]
+
+        if self.put_on_device:
+            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
+
+        self.encoded_item_ids = [x.id for x in tqdm(encoded_items)]
+        self.encoded_item_texts = [x.text for x in tqdm(encoded_items)]
 
     def retrieve(self, query: TextQuery, top_k: int) -> list[Item]:
         tokenized_query = self.tokenizer(
@@ -263,14 +257,15 @@ def do_eval_and_pretty_print(
     Args:
         retrieval_path (str): Path to the retrieval JSONL file.
         output_dir (str): Path to the output directory.
-        ir_dataset_name (str | None): If provided is used to get the qrels used
-            for evaluation. If None, then `qrel_json` must be provided. Defaults
-            to None.
-        qrel_json (str | None): If provided is used as the qrels for evaluation.
-            If None, then `qrel_json` must be provided. Defaults to None.
-        metric_names (list[str] | None): A list of metrics to compute. These are
-            passed to IR-Measures so should be compatible. If None, a default set
-            of metrics is found. Defaults to None.
+        ir_dataset_name (str | None, optional): If provided is used to
+            get the qrels used for evaluation. If None, then `qrel_json` must
+            be provided. Defaults to None.
+        qrel_json (str | None, optional): If provided is used as the qrels
+            for evaluation. If None, then `qrel_json` must
+            be provided. Defaults to None.
+        metric_names (list[str] | None, optional): A list of metrics to
+            compute. These are passed to IR-Measures so should be compatible.
+            If None, a default set of metrics is found. Defaults to None.
 
     Raises:
         ValueError: If both `ir_dataset_name` and `qrel_json` are provided.
@@ -288,10 +283,10 @@ def do_eval_and_pretty_print(
     else:
         qrels = load_qrels_from_ir_datasets(ir_dataset_name)
 
-    retrieval_path = Path(retrieval_path)
-    retrieval_pretty_path = retrieval_path.with_suffix(".txt")
+    # retrieval_path = Path(retrieval_path)
+    retrieval_pretty_path = Path(retrieval_path).with_suffix(".txt")
 
-    pretty_print_standard_format(retrieval_path, output_file=retrieval_pretty_path)
+    pretty_print_standard_format(retrieval_path, output_file=str(retrieval_pretty_path))
     run = load_standard_format_as_run(retrieval_path, score_key="score")
 
     calculate_metrics_to_file(
@@ -341,8 +336,6 @@ def do_retrieval_shared(
             "text".
         top_k (int, optional): The number of top items to retrieve. Defaults to
             1000.
-        retriever_kwargs (dict | None, optional): Additional keyword
-            arguments to pass to the retriever. Defaults to None.
         include_content (bool, optional): Whether to include the content of the
             retrieved items in the output. Defaults to True.
         do_eval (bool, optional): Whether to do evaluation. Defaults to True.
@@ -364,11 +357,11 @@ def do_retrieval_shared(
             " qrel_json must be provided."
         )
 
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir_path = Path(output_dir)
+    output_dir_path.mkdir(parents=True, exist_ok=True)
 
-    retrieval_file = output_dir / "retrieved_items.jsonl"
-    metric_dir = output_dir / "metrics"
+    retrieval_file = str(output_dir_path / "retrieved_items.jsonl")
+    metric_dir = str(output_dir_path / "metrics")
 
     retriever = retriever_cls(**retriever_kwargs)
 
@@ -383,7 +376,7 @@ def do_retrieval_shared(
             query_id_key=query_id_key,
             query_text_key=query_text_key,
         )
-    else:
+    elif ir_dataset_name is not None:
         retrieve_for_ir_dataset_queries(
             retriever=retriever,
             ir_dataset_name=ir_dataset_name,
@@ -393,6 +386,8 @@ def do_retrieval_shared(
             include_type=include_content,
             track_time=True,
         )
+    else:
+        raise ValueError("ir_dataset_name or query_jsonl must be provided")
 
     if do_eval:
         do_eval_and_pretty_print(
@@ -431,7 +426,7 @@ def do_retrieval(
         encoded_item_path (str): Path to the encoded items.
         output_dir (str): Path to the output directory which will contain the
             retrieval results and optionally the evaluation results.
-        ir_dataset_name (str | None): If provided is used to
+        ir_dataset_name (str | None, optional): If provided is used to
             get the queries used for retrieval and qrels used for evaluation.
             If None, then `query_jsonl` must be provided and `qrel_json` must
             be provided if `do_eval` is True. Defaults to None.

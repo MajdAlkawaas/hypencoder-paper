@@ -385,14 +385,18 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
         **kwargs,
     ) -> torch.Tensor:
         if self.use_in_batch_negatives:
-            if self.use_cross_device_negatives:
-                raise NotImplementedError(
-                    "Cross device negatives not supported for Hypencoder."
-                )
-            else:
-                query_model = query_output.representation
-                passage_embeddings = passage_output.representation
+            # Commented this code because use_cross_device_negatives
+            # was not declared anywhere in the codebase.
+            # if self.use_cross_device_negatives:
+            #     raise NotImplementedError(
+            #         "Cross device negatives not supported for Hypencoder."
+            #     )
+            # else:
+            #     query_model = query_output.representation
+            #     passage_embeddings = passage_output.representation
 
+            query_model = query_output.representation
+            passage_embeddings = passage_output.representation
             if self.only_use_first_item:
                 num_items = passage_embeddings.shape[0]
                 num_queries = query_model.num_queries

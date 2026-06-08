@@ -1,5 +1,3 @@
-# new  q_net implementation:
-
 from typing import Optional
 
 import torch

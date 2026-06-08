@@ -181,7 +181,7 @@ def load_model(model_config: HypencoderModelConfig):
     if model_config.checkpoint_path is not None:
         # --- FLAG ---
         logging.info(
-            f"FLAG: [load_model] Loading pre-trained model from checkpoint: "
+            "FLAG: [load_model] Loading pre-trained model from checkpoint: "
             f"{model_config.checkpoint_path}"
         )
         model = model_cls.from_pretrained(model_config.checkpoint_path, config=config)
@@ -332,7 +332,7 @@ def train_model(cfg: HypencoderTrainingConfig):
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(levelname)s - %(filename)s - "
-               "%(funcName)s - %(message)s",
+        "%(funcName)s - %(message)s",
         stream=sys.stdout,
     )
 
@@ -399,38 +399,6 @@ def train_model(cfg: HypencoderTrainingConfig):
     # --- FLAG ---
     print("FLAG: [train_model] Training complete.")
 
-    # logger.info("\n--- STAGE: Saving Final Model ---")
-    # final_output_dir = training_args.output_dir
-    # logger.info(f"FLAG: [train_model] Explicitly saving model to: {final_output_dir}")
-    # os.mkdir("./trained_models/extended_6_layers_frozen")
-    # trainer.save_model("./trained_models/extended_6_layers_frozen")
-    # tokenizer.save_pretrained("./trained_models/extended_6_layers_frozen")
-    # trainer.save_model(final_output_dir)
-    # tokenizer.save_pretrained(final_output_dir)
-    # logger.info("FLAG: [train_model] Final model and tokenizer saved successfully.")
-
-    # -------------------------------------
-    # --- THIS IS THE MODIFIED SECTION ---
-    # try:
-    #     # We will set a timeout of, for example, 3 minutes (180 seconds)
-    #     # for the entire training run. If it hangs on the first step for this long,
-    #     # something is wrong.
-    #     with timeout(seconds=600):
-    #         trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-
-    #     print("FLAG: [train_model] Training complete.")
-
-    # except TimeoutException:
-    #     print("\n" + "="*50)
-    #     print("ERROR: TRAINING TIMED OUT!")
-    #     print("The trainer.train() call did not complete within the time limit.")
-    #     print("This strongly indicates a deadlock in the data loading pipeline.")
-    #     print("Please ensure 'dataloader_num_workers' is 0 in your config.")
-    #     print("="*50 + "\n")
-    #     # Exit gracefully so you know the timeout worked
-    #     exit(1)
-    # # --- END OF MODIFIED SECTION ---
-
 
 def run_training(config_path: Optional[str] = None) -> None:
     # --- FLAG ---
@@ -444,8 +412,10 @@ def run_training(config_path: Optional[str] = None) -> None:
     else:
         config = schema
     # --- FLAG ---
-    # print("FLAG: [run_training] Configuration parsed successfully. "
-    #       "Starting model training...")
+    # print(
+    #     "FLAG: [run_training] Configuration parsed successfully. "
+    #     "Starting model training..."
+    # )
     train_model(config)
 
 
