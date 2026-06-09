@@ -167,6 +167,10 @@ class HypencoderRetriever(BaseRetriever):
                 for x in tqdm(encoded_items, desc="Stacking Embeddings")
             ]
         )
+
+        if self.put_on_device:
+            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
+
         print("INFO: Extracting item IDs and texts...")
         self.encoded_item_ids = [
             x.id for x in tqdm(encoded_items, desc="Encoded item ids")
@@ -174,12 +178,6 @@ class HypencoderRetriever(BaseRetriever):
         self.encoded_item_texts = [
             x.text for x in tqdm(encoded_items, desc="Encoded item texts")
         ]
-
-        if self.put_on_device:
-            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
-
-        self.encoded_item_ids = [x.id for x in tqdm(encoded_items)]
-        self.encoded_item_texts = [x.text for x in tqdm(encoded_items)]
 
     def retrieve(self, query: TextQuery, top_k: int) -> list[Item]:
         tokenized_query = self.tokenizer(
