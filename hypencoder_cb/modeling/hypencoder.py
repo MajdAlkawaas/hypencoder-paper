@@ -428,11 +428,11 @@ class HypencoderDualEncoder(BaseDualEncoder):
             # MATRYOSHKA: Change, add the new Matryoshka loss type
             elif loss_type == "matryoshka_dim_margin_mse":
                 # Get the converter from the query encoder
-                q_net_converter = self.query_encoder.weight_to_model_converter
+                original_qnet_converter = self.query_encoder.weight_to_model_converter
                 # Pass it to the loss function during initialization
                 self.similarity_losses.append(
                     HypencoderMatryoshkaDimMarginMSELoss(
-                        q_net_converter=q_net_converter, **loss_kwargs
+                        original_qnet_converter=original_qnet_converter, **loss_kwargs
                     )
                 )
             else:

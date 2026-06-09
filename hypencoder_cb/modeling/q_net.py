@@ -167,7 +167,7 @@ def activation_factory(
         return torch.nn.Sigmoid()
     elif activation_type == "gelu":
         return torch.nn.GELU()
-    elif activation_type == "leaky_relu":
+    elif activation_type == "leakyrelu":
         return torch.nn.LeakyReLU()
     else:
         raise ValueError(f"Unknown activation type: {activation_type}")
@@ -297,8 +297,8 @@ class RepeatedDenseBlockConverter:
 
 
 class MatryoshkaQNetFactory:
-    def __init__(self, original_converter: RepeatedDenseBlockConverter):
-        self.original_converter = original_converter
+    def __init__(self, original_qnet_converter: RepeatedDenseBlockConverter):
+        self.original_qnet_converter = original_qnet_converter
 
     def _truncate_parameters(
         self,
@@ -366,20 +366,20 @@ class MatryoshkaQNetFactory:
         q_nets: dict[int, NoTorchSequential] = {}
 
         for dim in matryoshka_dims:
-            dim_in = self.original_converter.vector_dimensions[0]
+            dim_in = self.original_qnet_converter.vector_dimensions[0]
             dim_hidden = dim
-            dim_out = self.original_converter.vector_dimensions[-1]
+            dim_out = self.original_qnet_converter.vector_dimensions[-1]
 
             # Create a temporary converter with the same settings as the original
             temp_converter = RepeatedDenseBlockConverter(
-                vector_dimensions=self.original_converter.vector_dimensions,
-                activation_type=self.original_converter.activation.__class__.__name__.lower(),
-                do_dropout=self.original_converter.do_dropout,
-                dropout_prob=self.original_converter.dropout_prob,
-                do_layer_norm=self.original_converter.do_layer_norm,
-                do_residual=self.original_converter.do_residual,
-                do_residual_on_last=self.original_converter.do_residual_on_last,
-                layer_norm_before_residual=self.original_converter.layer_norm_before_residual,
+                vector_dimensions=self.original_qnet_converter.vector_dimensions,
+                activation_type=self.original_qnet_converter.activation.__class__.__name__.lower(),
+                do_dropout=self.original_qnet_converter.do_dropout,
+                dropout_prob=self.original_qnet_converter.dropout_prob,
+                do_layer_norm=self.original_qnet_converter.do_layer_norm,
+                do_residual=self.original_qnet_converter.do_residual,
+                do_residual_on_last=self.original_qnet_converter.do_residual_on_last,
+                layer_norm_before_residual=self.original_qnet_converter.layer_norm_before_residual,
             )
 
             # Truncate the parameters for the current dimension input dim is fixed, 
