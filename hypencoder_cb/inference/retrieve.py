@@ -32,12 +32,16 @@ class HypencoderRetriever(BaseRetriever):
         self,
         model_name_or_path: str,
         encoded_item_path: str | None = None,
-        preloaded_encoded_items: list | None = None,  # Added new argument
+        preloaded_embeddings: torch.Tensor | None = None,
+        preloaded_ids: list[str] | None = None,
+        preloaded_texts: list[str] | None = None,
+        preloaded_encoded_items: list | None = None,
+        model_for_retrieval: HypencoderDualEncoder | None = None,
         batch_size: int = 100_000,
         device: str = "cuda",
         dtype: torch.dtype | str = "float32",
         query_model_kwargs: dict | None = None,
-        put_all_embeddings_on_device: bool = True,  # This will be controlled
+        put_all_embeddings_on_device: bool = True,
         query_max_length: int = 32,
         ignore_same_id: bool = False,
     ) -> None:
@@ -86,27 +90,17 @@ class HypencoderRetriever(BaseRetriever):
 
         # --- REFACTORED INITIALIZATION ---
 
-        # print("Started loading encoded items...")
-        # encoded_items = load_encoded_items_from_disk(
-        #     encoded_item_path,
-        # )
+        # 1. Load the model and tokenizer
+        self._load_model_and_tokenizer(model_name_or_path, model_for_retrieval)
 
-        # Modified the loading of the encoded data
-        if preloaded_encoded_items is not None:
-            print("INFO: Using pre-loaded encoded items from memory.")
-            encoded_items = preloaded_encoded_items
-        elif encoded_item_path is not None:
-            print("INFO: Loading encoded items from disk...")
-            # We need to pass the dtype here to ensure correct loading
-            # Assuming fp16 if not specified, as that's the context of this problem
-            # The calling script will handle the dtype logic.
-            encoded_items = load_encoded_items_from_disk(
-                encoded_item_path, target_dtype=self.dtype.__str__().split(".")[-1]
-            )
-        else:
-            raise ValueError(
-                "Must provide either 'encoded_item_path' or 'preloaded_encoded_items'."
-            )
+        # 2. Load and process the document corpus
+        self._load_and_process_data(
+            encoded_item_path=encoded_item_path,
+            preloaded_embeddings=preloaded_embeddings,
+            preloaded_ids=preloaded_ids,
+            preloaded_texts=preloaded_texts,
+            preloaded_encoded_items=preloaded_encoded_items,
+        )
 
         # 3. Move embeddings to GPU if requested
         if self.put_on_device and self.encoded_item_embeddings is not None:
@@ -167,10 +161,6 @@ class HypencoderRetriever(BaseRetriever):
                 for x in tqdm(encoded_items, desc="Stacking Embeddings")
             ]
         )
-
-        if self.put_on_device:
-            self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
-
         print("INFO: Extracting item IDs and texts...")
         self.encoded_item_ids = [
             x.id for x in tqdm(encoded_items, desc="Encoded item ids")
