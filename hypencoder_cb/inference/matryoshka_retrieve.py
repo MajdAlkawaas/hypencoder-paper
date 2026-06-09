@@ -80,7 +80,7 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
         
 
         self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
-            original_converter=self.model.query_encoder.weight_to_model_converter
+            original_qnet_converter=self.model.query_encoder.weight_to_model_converter
         )
 
         print(

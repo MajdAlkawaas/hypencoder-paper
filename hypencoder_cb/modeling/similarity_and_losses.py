@@ -441,7 +441,7 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
         # The dimensions to supervise, e.g., [16, 32, 128, 256, 512, 768]
         self.matryoshka_dims = sorted(matryoshka_dims)
         self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
-            original_converter=original_qnet_converter
+            original_qnet_converter=original_qnet_converter
         )
         logging.info(
             f"Initializing Matryoshka Loss for dimensions: {self.matryoshka_dims}"
