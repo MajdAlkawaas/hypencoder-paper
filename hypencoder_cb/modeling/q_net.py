@@ -321,7 +321,7 @@ class MatryoshkaQNetFactory:
             dim_out (int): The dimension of the output vectors.
 
         Returns:
-            tuple[list[torch.Tensor], list[torch.Tensor]]: A tuple of the truncated 
+            tuple[list[torch.Tensor], list[torch.Tensor]]: A tuple of the truncated
             weight matrices and bias vectors.
         """
         truncated_matrices = []
@@ -350,7 +350,7 @@ class MatryoshkaQNetFactory:
         bias_vectors: list[torch.Tensor],
         matryoshka_dims: list[int],
         is_training: bool,
-    ):
+    ) -> dict[int, NoTorchSequential]:
         """
         Args:
             weight_matrices (list[torch.Tensor]): The weight matrices with the shapes:
@@ -382,7 +382,7 @@ class MatryoshkaQNetFactory:
                 layer_norm_before_residual=self.original_qnet_converter.layer_norm_before_residual,
             )
 
-            # Truncate the parameters for the current dimension input dim is fixed, 
+            # Truncate the parameters for the current dimension input dim is fixed,
             # output is fixed (1)
             truncated_matrices, truncated_vectors = self._truncate_parameters(
                 weight_matrices, bias_vectors, dim_in, dim_hidden, dim_out
@@ -394,5 +394,3 @@ class MatryoshkaQNetFactory:
             )
 
         return q_nets
-
-
