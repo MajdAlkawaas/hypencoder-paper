@@ -106,7 +106,7 @@ class HypencoderRetriever(BaseRetriever):
         if self.put_on_device and self.encoded_item_embeddings is not None:
             self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
 
-    def _load_model_and_tokenizer(self, model_name_or_path, model_for_retrieval):
+    def _load_model_and_tokenizer(self, model_name_or_path: str, model_for_retrieval):
         """Helper to load the model from one of two sources."""
         if model_for_retrieval is not None:
             self.model = model_for_retrieval.to(self.device, dtype=self.dtype).eval()
@@ -132,6 +132,14 @@ class HypencoderRetriever(BaseRetriever):
     def _load_and_process_data(self, **kwargs):
         """Helper to load data from one of the provided sources."""
         if kwargs.get("preloaded_embeddings") is not None:
+            if (
+                kwargs.get("preloaded_ids") is None
+                or kwargs.get("preloaded_texts") is None
+            ):
+                raise ValueError(
+                    "When providing preloaded_embeddings, you must also "
+                    "provide preloaded_ids and preloaded_texts."
+                )
             print("INFO: Using pre-processed tensors and lists from memory.")
             self.encoded_item_embeddings = kwargs["preloaded_embeddings"]
             self.encoded_item_ids = kwargs["preloaded_ids"]
