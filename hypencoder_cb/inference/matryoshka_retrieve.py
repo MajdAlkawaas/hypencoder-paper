@@ -160,15 +160,16 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
         final_values, final_indices_of_indices = torch.topk(top_k_scores, top_k, dim=0)
         final_indices = top_k_indices[final_indices_of_indices]
 
+
         items = []
-        for item_idx, score in zip(final_indices, final_values):
+        for item_idx, score in zip(final_indices.tolist(), final_values.tolist()):
             if item_idx == -1:
                 continue  # Skip padding values
             items.append(
                 Item(
                     text=self.encoded_item_texts[item_idx],
                     id=self.encoded_item_ids[item_idx],
-                    score=score.item(),
+                    score=score,
                     type=f"matryoshka_retriever_dim_{self.matryoshka_dim}",
                 )
             )
