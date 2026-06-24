@@ -1,10 +1,18 @@
+import logging
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 import torch
 import torch.nn as nn
 
 from hypencoder_cb.modeling.shared import EncoderOutput
+
+from .q_net import MatryoshkaQNetFactory, RepeatedDenseBlockConverter
+
+# from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder # For type hinting
+
+if TYPE_CHECKING:
+    from .hypencoder import HypencoderOutput
 
 
 def pos_neg_triplets_from_similarity(similarity: torch.Tensor) -> torch.Tensor:
@@ -414,3 +422,86 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
             )
 
         return similarity
+
+
+class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
+    """
+    Calculates MarginMSE loss across multiple q-net widths (Matryoshka dimensions).
+    """
+
+    def __init__(
+        self,
+        matryoshka_dims: list[int],
+        original_qnet_converter: "RepeatedDenseBlockConverter",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if not matryoshka_dims:
+            raise ValueError("matryoshka_dims cannot be empty.")
+        # The dimensions to supervise, e.g., [16, 32, 128, 256, 512, 768]
+        self.matryoshka_dims = sorted(matryoshka_dims)
+        self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
+            original_qnet_converter=original_qnet_converter
+        )
+        logging.info(
+            f"Initializing Matryoshka Loss for dimensions: {self.matryoshka_dims}"
+        )
+
+    def forward(
+        self,
+        query_output: "HypencoderOutput",
+        passage_output: "EncoderOutput",
+        labels: Optional[torch.Tensor] = None,
+        # model: Optional["HypencoderDualEncoder"] = None
+        # Pass the model to access the converter
+    ) -> "SimilarityAndLossOutput":
+
+        # Get the full-size generated parameters from the query encoder's output
+        full_matrices = query_output.generated_matrices
+        full_vectors = query_output.generated_vectors
+        item_embeddings = passage_output.representation
+
+        if full_matrices is None or full_vectors is None:
+            raise ValueError(
+                "Matryoshka loss requires 'generated_matrices' and 'generated_vectors'."
+            )
+
+        total_loss = torch.tensor(0.0, device=item_embeddings.device)
+        num_dims_supervised = len(self.matryoshka_dims)
+        
+
+        matryoshka_qnets = self.matryoshka_qnet_factory.build(
+                                            full_matrices,
+                                            full_vectors,
+                                            self.matryoshka_dims,
+                                            is_training=True,
+                                            )
+        
+        # Loop through each specified Matryoshka dimension
+
+        # TODO: Ensure that the keys are ordered.
+        # TODO: Ensure that the dict contains the correct dims
+        for dim, q_net_at_dim in matryoshka_qnets.items():
+            
+            similarity_at_dim = no_in_batch_negatives_hypecoder_similarity(
+                q_net_at_dim, item_embeddings
+            )
+
+            # 5. Calculate the loss for this dimension
+            triplet_similarity = pos_neg_triplets_from_similarity(similarity_at_dim)
+            loss_at_dim = self._loss(triplet_similarity, labels)
+
+            # TODO: Add option for weighted loss 
+            total_loss += loss_at_dim
+
+        average_loss = total_loss / num_dims_supervised
+
+        # For logging purposes, we can return the similarity from the largest q-net
+        full_size_q_net = query_output.representation
+
+        # TODO: Why are we calculating the similarity using the full size Q-net
+        # is this just for logging purposes or are we using it somewhere else
+        final_similarity = no_in_batch_negatives_hypecoder_similarity(
+            full_size_q_net, item_embeddings
+        )
+        return SimilarityAndLossOutput(similarity=final_similarity, loss=average_loss)

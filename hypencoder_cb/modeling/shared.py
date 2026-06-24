@@ -56,11 +56,16 @@ class BaseDualEncoder(PreTrainedModel):
     config_class = BaseDualEncoderConfig
 
     def __init__(self, config: BaseDualEncoderConfig):
-        super(BaseDualEncoder, self).__init__(config)
-        self._get_similarity_loss(config)
-        self.similarity_loss_forward_kwargs = [
-            {} for _ in range(len(self.similarity_losses))
-        ]
+        super().__init__(config)
+        # super(BaseDualEncoder, self).__init__(config)
+        # self._get_similarity_loss(config)
+        # self.similarity_loss_forward_kwargs = [
+        #     {} for _ in range(len(self.similarity_losses))
+        # ]
+
+        # We will initialize this as an empty list here.
+        self.similarity_losses = []
+        self.similarity_loss_forward_kwargs = []
 
     def _get_similarity_loss(self, config: BaseDualEncoderConfig):
         raise NotImplementedError()
@@ -123,6 +128,16 @@ class BaseDualEncoder(PreTrainedModel):
 
         if self.training or full_output:
             to_log = {}
+
+
+            # If we are in a training/evaluation context, we MUST have a loss function.
+            if not self.similarity_losses:
+                raise ValueError(
+                f"The model '{self.__class__.__name__}' is in training or full_output mode "
+                "but has no similarity losses defined. Please ensure that the "
+                "_get_similarity_loss() method is correctly implemented and "
+                "populates the 'self.similarity_losses' list in the constructor."
+                )
 
             total_similarity_loss = torch.tensor(0.0, device=self.device)
             for i, similarity_loss in enumerate(self.similarity_losses):

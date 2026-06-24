@@ -25,9 +25,9 @@ class HypencoderModelConfig:
     query_encoder_kwargs: dict = field(default_factory=dict)
     passage_encoder_kwargs: dict = field(default_factory=dict)
 
-    # Union[str, List[str]]
+    # str | list[str]
     loss_type: Any = field(default_factory=lambda: [])
-    # Union[Dict[str, Any], List[Dict[str, Any]]]
+    # dict[str, Any] | list[dict[str, Any]]
     loss_kwargs: Any = field(default_factory=list)
 
     checkpoint_path: Optional[str] = None
