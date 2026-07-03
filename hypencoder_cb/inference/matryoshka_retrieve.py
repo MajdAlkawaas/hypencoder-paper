@@ -77,8 +77,6 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
         # CHANGE: ADDED THIS LINE
         self.embeddings_on_gpu = self.encoded_item_embeddings.device.type == "cuda"
 
-        
-
         self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
             original_qnet_converter=self.model.query_encoder.weight_to_model_converter
         )
@@ -110,15 +108,13 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
             )
             full_matrices = query_output.generated_matrices
             full_vectors = query_output.generated_vectors
-        
-
 
         matryoshka_qnets = self.matryoshka_qnet_factory.build(
-                                            full_matrices,
-                                            full_vectors,
-                                            [self.matryoshka_dim],
-                                            is_training=False,
-                                            )
+            full_matrices,
+            full_vectors,
+            [self.matryoshka_dim],
+            is_training=False,
+        )
         # Get the Q-Net out of the dictionary.
         q_net_at_dim = matryoshka_qnets[self.matryoshka_dim]
         # 4. Use this smaller q-net to score the documents (batched logic from parent)
@@ -142,7 +138,6 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
                 # Use our on-the-fly q-net here
                 similarity_matrix = q_net_at_dim(batch_item_embeddings).squeeze()
 
-
                 values, indices = torch.topk(
                     similarity_matrix, min(top_k, similarity_matrix.shape[0]), dim=0
                 )
@@ -159,7 +154,6 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
         # Find the final top_k across all batches
         final_values, final_indices_of_indices = torch.topk(top_k_scores, top_k, dim=0)
         final_indices = top_k_indices[final_indices_of_indices]
-
 
         items = []
         for item_idx, score in zip(final_indices.tolist(), final_values.tolist()):
@@ -188,8 +182,8 @@ class MatryoshkaHypencoderRetriever(HypencoderRetriever):
 # =================================================================================
 # --- Main Orchestration Script ---
 # =================================================================================
-def evaluate_matryoshka_checkpoints(
-    training_run_dir: str,
+def evaluate_matryoshka(
+    model_path: str,
     encoded_item_path: str,
     ir_dataset_name: str,
     matryoshka_dims: list[int],
@@ -248,82 +242,66 @@ def evaluate_matryoshka_checkpoints(
         embeddings_for_retriever = embeddings_cpu
     # --- END OF NEW LOGIC ---
 
-    # --- Automatic Checkpoint Discovery ---
-    checkpoint_paths = glob.glob(os.path.join(training_run_dir, "checkpoint-*"))
-    checkpoint_paths.sort(key=lambda x: int(x.split("-")[-1]))
-    if os.path.exists(os.path.join(training_run_dir, "pytorch_model.bin")):
-        checkpoint_paths.append(training_run_dir)
-    print(f"Found {len(checkpoint_paths)} checkpoints to evaluate.")
+    # =========================================================================
+    # --- SURGICAL MODEL & TOKENIZER LOADING (ONCE PER CHECKPOINT) ---
+    # =========================================================================
+    local_model = HypencoderDualEncoder.from_pretrained(model_path)
+    original_model = HypencoderDualEncoder.from_pretrained(original_model_name)
+    local_model.passage_encoder.transformer = original_model.passage_encoder.transformer
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-    # --- OUTER LOOP: Iterates through each model checkpoint ---
-    for i, checkpoint_path in enumerate(checkpoint_paths):
-        print("\n" + "#" * 70)
-        print(
-            f"# LOADING CHECKPOINT & TOKENIZER {i + 1}/{len(checkpoint_paths)} ONCE: "
-            f"{checkpoint_path}"
+    local_model = local_model.to(device, dtype=dtype_torch)
+
+    # --- INNER LOOP: Iterates through each Matryoshka dimension ---
+    for dim in matryoshka_dims:
+        print("\n" + "=" * 50)
+        print(f"EVALUATING DIMENSION: {dim}")
+
+        output_dir_for_dim = (
+            Path(base_output_dir)
+            / Path(ir_dataset_name)
+            / Path(model_path).name
+            / f"dim_{dim}"
+        )
+        output_dir_for_dim.mkdir(parents=True, exist_ok=True)
+        time_dir = output_dir_for_dim / "time"
+        time_dir.mkdir(parents=True, exist_ok=True)
+        # This initialization is now extremely fast. It does no I/O.
+        retriever = MatryoshkaHypencoderRetriever(
+            matryoshka_dim=dim,
+            model_object=local_model,
+            tokenizer_object=tokenizer,
+            # embeddings_tensor=preloaded_embeddings, # CHANGE: COMMENTED THIS
+            embeddings_tensor=embeddings_for_retriever,  # CHNAGE: ADDED THIS
+            ids_list=preloaded_ids,
+            texts_list=preloaded_texts,
+            batch_size=batch_size,
+            dtype=dtype,
+            put_all_embeddings_on_device=put_all_embeddings_on_device,
         )
 
-        # =========================================================================
-        # --- SURGICAL MODEL & TOKENIZER LOADING (ONCE PER CHECKPOINT) ---
-        # =========================================================================
-        local_model = HypencoderDualEncoder.from_pretrained(checkpoint_path)
-        original_model = HypencoderDualEncoder.from_pretrained(original_model_name)
-        local_model.passage_encoder.transformer = (
-            original_model.passage_encoder.transformer
+        # Run retrieval and evaluation for this specific configuration
+        retrieval_file = output_dir_for_dim / "retrieved_items.jsonl"
+        retrieve_for_ir_dataset_queries(
+            retriever=retriever,
+            ir_dataset_name=ir_dataset_name,
+            output_path=retrieval_file,
+            top_k=top_k,
+            track_time=True,
+            track_time_file=time_dir / "retrieval_time.json",
         )
-        tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
-
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        local_model = local_model.to(device, dtype=dtype_torch)
-
-        # --- INNER LOOP: Iterates through each Matryoshka dimension ---
-        for dim in matryoshka_dims:
-            print("\n" + "=" * 50)
-            print(f"EVALUATING DIMENSION: {dim}")
-
-
-            output_dir_for_dim = (
-                Path(base_output_dir) / Path(checkpoint_path).name / f"dim_{dim}"
-            )
-            output_dir_for_dim.mkdir(parents=True, exist_ok=True)
-            time_dir = output_dir_for_dim / "time"
-            time_dir.mkdir(parents=True, exist_ok=True)
-            # This initialization is now extremely fast. It does no I/O.
-            retriever = MatryoshkaHypencoderRetriever(
-                matryoshka_dim=dim,
-                model_object=local_model,
-                tokenizer_object=tokenizer,
-                # embeddings_tensor=preloaded_embeddings, # CHANGE: COMMENTED THIS
-                embeddings_tensor=embeddings_for_retriever,  # CHNAGE: ADDED THIS
-                ids_list=preloaded_ids,
-                texts_list=preloaded_texts,
-                batch_size=batch_size,
-                dtype=dtype,
-                put_all_embeddings_on_device=put_all_embeddings_on_device,
-            )
-
-            # Run retrieval and evaluation for this specific configuration
-            retrieval_file = output_dir_for_dim / "retrieved_items.jsonl"
-            retrieve_for_ir_dataset_queries(
-                retriever=retriever,
-                ir_dataset_name=ir_dataset_name,
-                output_path=retrieval_file,
-                top_k=top_k,
-                track_time=True,
-                track_time_file=time_dir / "retrieval_time.json",
-            )
-            do_eval_and_pretty_print(
-                retrieval_path=retrieval_file,
-                output_dir=output_dir_for_dim / "metrics",
-                ir_dataset_name=ir_dataset_name,
-            )
-            print(f"EVALUATION FOR DIMENSION {dim} is DONE")
-            print(f"SAVED THE RESULTS TO {output_dir_for_dim}")
-            print("PROCEEDING TO NEXT DIM")
+        do_eval_and_pretty_print(
+            retrieval_path=retrieval_file,
+            output_dir=output_dir_for_dim / "metrics",
+            ir_dataset_name=ir_dataset_name,
+        )
+        print(f"EVALUATION FOR DIMENSION {dim} is DONE")
+        print(f"SAVED THE RESULTS TO {output_dir_for_dim}")
+        print("PROCEEDING TO NEXT DIM")
 
 
 if __name__ == "__main__":
     fire.Fire(evaluate_matryoshka_checkpoints)
 
 
-# 
+#
