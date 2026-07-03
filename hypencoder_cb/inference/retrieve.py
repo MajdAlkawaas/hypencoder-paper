@@ -30,7 +30,7 @@ from hypencoder_cb.utils.torch_utils import dtype_lookup
 class HypencoderRetriever(BaseRetriever):
     def __init__(
         self,
-        model_name_or_path: str,
+        model_name_or_path: str | None = None,
         encoded_item_path: str | None = None,
         preloaded_embeddings: torch.Tensor | None = None,
         preloaded_ids: list[str] | None = None,
@@ -106,7 +106,11 @@ class HypencoderRetriever(BaseRetriever):
         if self.put_on_device and self.encoded_item_embeddings is not None:
             self.encoded_item_embeddings = self.encoded_item_embeddings.to(self.device)
 
-    def _load_model_and_tokenizer(self, model_name_or_path: str, model_for_retrieval):
+    def _load_model_and_tokenizer(
+        self,
+        model_name_or_path: str | None = None,
+        model_for_retrieval: HypencoderDualEncoder | None = None,
+    ):
         """Helper to load the model from one of two sources."""
         if model_for_retrieval is not None:
             self.model = model_for_retrieval.to(self.device, dtype=self.dtype).eval()
@@ -353,7 +357,11 @@ def do_retrieval_shared(
             " qrel_json must be provided."
         )
 
-    output_dir_path = Path(output_dir)
+    output_dir_path = (
+        Path(output_dir)
+        / Path(ir_dataset_name)
+        / Path(retriever_kwargs.model_path).name
+    )
     output_dir_path.mkdir(parents=True, exist_ok=True)
 
     retrieval_file = str(output_dir_path / "retrieved_items.jsonl")
