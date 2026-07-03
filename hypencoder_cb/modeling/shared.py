@@ -129,14 +129,13 @@ class BaseDualEncoder(PreTrainedModel):
         if self.training or full_output:
             to_log = {}
 
-
             # If we are in a training/evaluation context, we MUST have a loss function.
             if not self.similarity_losses:
                 raise ValueError(
-                f"The model '{self.__class__.__name__}' is in training or full_output mode "
-                "but has no similarity losses defined. Please ensure that the "
-                "_get_similarity_loss() method is correctly implemented and "
-                "populates the 'self.similarity_losses' list in the constructor."
+                    f"The model '{self.__class__.__name__}' is in training or full_output mode "
+                    "but has no similarity losses defined. Please ensure that the "
+                    "_get_similarity_loss() method is correctly implemented and "
+                    "populates the 'self.similarity_losses' list in the constructor."
                 )
 
             total_similarity_loss = torch.tensor(0.0, device=self.device)
