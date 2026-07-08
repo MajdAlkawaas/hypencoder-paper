@@ -59,7 +59,7 @@ def export_config_to_yaml(
     config = OmegaConf.structured(RetrievalConfig)
 
     if config_name is None:
-        config_name = config
+        config_name = "retrieval_config"
 
     if not config_name.endswith(".yaml"):
         config_name += ".yaml"

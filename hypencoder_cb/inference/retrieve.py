@@ -360,7 +360,7 @@ def do_retrieval_shared(
     output_dir_path = (
         Path(output_dir)
         / Path(ir_dataset_name)
-        / Path(retriever_kwargs.model_path).name
+        / Path(retriever_kwargs["model_path"]).name
     )
     output_dir_path.mkdir(parents=True, exist_ok=True)
 

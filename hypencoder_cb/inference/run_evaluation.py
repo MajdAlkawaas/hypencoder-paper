@@ -22,15 +22,15 @@ def evaluation_campaign(config: RetrievalConfig) -> None:
     """
     logger.info("Starting Automated Evaluation Campaign")
 
-    for model in config.models_to_evaluate:
+    for model_config in config.models_to_evaluate:
         logging.info(
-            f"Evaluating model: {model.name_or_path} model type: {config.model_type} "
+            f"Evaluating model: {model_config.name_or_path} model type: {config.model_type} "
             f"from path: {model_config.path}"
         )
         for dataset_config in config.datasets_to_evaluate:
             if config.model_type == "standard":
                 do_retrieval(
-                    model_name_or_path=model.name_or_path,
+                    model_name_or_path=model_config.name_or_path,
                     encoded_item_path=dataset_config.encoding_path,
                     output_dir=config.base_output_dir,
                     ir_dataset_name=dataset_config.ir_dataset_name,
@@ -51,7 +51,7 @@ def evaluation_campaign(config: RetrievalConfig) -> None:
             elif config.model_type == "matryoshka":
                 if config.matryoshka_dims is not None:
                     evaluate_matryoshka(
-                        model_path=model.name_or_path,
+                        model_path=model_config.name_or_path,
                         encoded_item_path=dataset_config.encoding_path,
                         ir_dataset_name=dataset_config.ir_dataset_name,
                         matryoshka_dims=config.matryoshka_dims,

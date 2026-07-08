@@ -195,8 +195,8 @@ def evaluate_matryoshka(
     put_all_embeddings_on_device: bool = True,
 ):
     """
-    Evaluates all checkpoints from a Matryoshka training run across all
-    specified dimensions, performing data processing and model loading efficiently.
+    Evaluates a Matryoshka Hypencoder model across all specified dimensions, 
+    performing data processing and model loading efficiently.
     """
     # =========================================================================
     # --- ONE-TIME DATA DESERIALIZATION & PROCESSING (OUTSIDE ALL LOOPS) ---
@@ -301,7 +301,7 @@ def evaluate_matryoshka(
 
 
 if __name__ == "__main__":
-    fire.Fire(evaluate_matryoshka_checkpoints)
+    fire.Fire(evaluate_matryoshka)
 
 
 #
