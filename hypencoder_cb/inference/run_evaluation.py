@@ -1,5 +1,5 @@
 import logging
-
+import os
 import fire
 from omegaconf import OmegaConf
 from tqdm import tqdm
@@ -25,14 +25,20 @@ def evaluation_campaign(config: RetrievalConfig) -> None:
     for model_config in config.models_to_evaluate:
         logging.info(
             f"Evaluating model: {model_config.name_or_path} model type: {config.model_type} "
-            f"from path: {model_config.path}"
+            f"from path: {model_config.name_or_path}"
         )
         for dataset_config in config.datasets_to_evaluate:
+            output_dir_for_run = os.path.join(
+                config.base_output_dir,
+                config.model_type,
+                dataset_config.ir_dataset_name.replace("/", "_").replace("-", "_")
+            )
+
             if config.model_type == "standard":
                 do_retrieval(
                     model_name_or_path=model_config.name_or_path,
                     encoded_item_path=dataset_config.encoding_path,
-                    output_dir=config.base_output_dir,
+                    output_dir=output_dir_for_run,
                     ir_dataset_name=dataset_config.ir_dataset_name,
                     query_jsonl=dataset_config.query_jsonl,
                     qrel_json=dataset_config.qrel_json,
@@ -55,7 +61,7 @@ def evaluation_campaign(config: RetrievalConfig) -> None:
                         encoded_item_path=dataset_config.encoding_path,
                         ir_dataset_name=dataset_config.ir_dataset_name,
                         matryoshka_dims=config.matryoshka_dims,
-                        base_output_dir=config.base_output_dir,
+                        base_output_dir=output_dir_for_run,
                     )
                 else:
                     raise ValueError("Matryoshka dims not specified")
