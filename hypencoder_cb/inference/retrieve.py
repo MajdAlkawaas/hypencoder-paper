@@ -357,11 +357,7 @@ def do_retrieval_shared(
             " qrel_json must be provided."
         )
 
-    output_dir_path = (
-        Path(output_dir)
-        / Path(ir_dataset_name)
-        / Path(retriever_kwargs["model_path"]).name
-    )
+    output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
 
     retrieval_file = str(output_dir_path / "retrieved_items.jsonl")
