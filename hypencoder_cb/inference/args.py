@@ -15,10 +15,10 @@ class DatasetConfig:
     # TODO: handle non ir_dataset_name datasets
     ir_dataset_name: str  # The name in the ir_datasets library
     encoding_path: str  # Path to the pre-computed document embeddings
-    query_jsonl: str  # Path to the queries
-    qrel_json: str  # Path to the qrels
-    query_id_key: str
-    query_text_key: str
+    query_jsonl: str | None = None # Allow this to be None
+    qrel_json: str | None = None   # Path to the qrels
+    query_id_key: str | None = None
+    query_text_key: str | None = None
 
 
 @dataclass
