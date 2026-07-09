@@ -3,9 +3,9 @@ from collections import defaultdict
 from numbers import Number
 from pathlib import Path
 from typing import Optional
-
+import os 
 import ir_measures
-
+import time
 from hypencoder_cb.utils.jsonl_utils import JsonlReader
 
 DEFAULT_METRICS = [
@@ -99,14 +99,59 @@ def calculate_metrics_to_file(
         run, qrels, metric_names=metric_names
     )
 
-    Path(output_folder).mkdir(parents=True, exist_ok=True)
+    output_folder = Path(output_folder)
+    # output_folder.mkdir(parents=True, exist_ok=True)
 
+    print(f"\n--- DEBUG: Inside calculate_metrics_to_file ---")
+    print(f"  > Current Working Directory: {os.getcwd()}")
+    print(f"  > Target output_folder (absolute): {output_folder.resolve()}")
+    
+    try:
+        output_folder.mkdir(parents=True, exist_ok=True)
+        print(f"  > Successfully created or found directory: {output_folder.resolve()}")
+    except Exception as e:
+        print(f"  > FAILED to create directory: {e}")
+        # If this fails, we know it's a permissions issue.
+        # It's important to exit here if we can't write.
+        raise
+
+    aggregated_filename = output_folder / "aggregated_metrics.json"
+
+    # --- Test write, flush, and check existence ---
+    try:
+        print(f"  > Attempting to write to test file: {output_folder / 'test_write.txt'}")
+        with open(output_folder / "test_write.txt", "w") as f:
+            f.write("This is a test write.\n")
+            # Force the write buffer to be flushed to the OS
+            f.flush()
+            # Ask the OS to write all its caches to disk (for NFS)
+            os.fsync(f.fileno()) 
+        print("  > Write and fsync completed without error.")
+        
+        # Give the file system a moment to sync
+        time.sleep(2)
+        
+        # Now, immediately check if the file exists from Python's perspective
+        if os.path.exists(output_folder / "test_write.txt"):
+            print("  > SUCCESS: Python can see the test file it just wrote.")
+        else:
+            print("  > CRITICAL FAILURE: Python CANNOT see the test file it just wrote. This indicates a severe file system or NFS caching issue.")
+
+    except Exception as e:
+        print(f"  > FAILED during test write: {e}")
+        raise
+    
     aggregated_filename = output_folder / "aggregated_metrics.json"
     per_query_filename = output_folder / "per_query_metrics.json"
 
     aggregated_metrics = {str(k): v for k, v in aggregated_metrics.items()}
 
+    with open(output_folder/"test.txt", "a") as f:
+        print(f"Hello I am supposed to be writing a file at the path {output_folder}")
+        f.write("Now the file has more content!")
+    
     with open(aggregated_filename, "w") as f:
+        print("YOYO", aggregated_filename)
         json.dump(aggregated_metrics, f, sort_keys=True, indent=4)
 
     with open(per_query_filename, "w") as f:
