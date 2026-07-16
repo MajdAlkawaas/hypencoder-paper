@@ -259,7 +259,6 @@ def evaluate_matryoshka(
 
         output_dir_for_dim = (
             Path(base_output_dir)
-            / Path(ir_dataset_name)
             / Path(model_path).name
             / f"dim_{dim}"
         )
