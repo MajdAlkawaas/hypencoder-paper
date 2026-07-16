@@ -56,6 +56,7 @@ def export_config_to_yaml(
     config_dir: str = "configs",
 ) -> None:
     config_dir = relative_file_path_to_abs_path(config_dir)
+    os.makedirs(config_dir, exist_ok=True)
     config = OmegaConf.structured(RetrievalConfig)
 
     if config_name is None:
