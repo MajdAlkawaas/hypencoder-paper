@@ -1,0 +1,21 @@
+model_type: matryoshka
+models_to_evaluate:
+  - name_or_path: "majdalkawaas/matryoshka-hypencoder" 
+datasets_to_evaluate:
+  - ir_dataset_name: "beir/webis-touche2020/v2"
+    encoding_path: "./encoded_items/beir_webis-touche2020_v2.docs"
+    query_jsonl: null
+    qrel_json: null
+    query_id_key: "id"
+    query_text_key: "text"
+base_output_dir: "./encoded_validation_sets/retrieved_items/"
+matryoshka_dims: [128, 256, 512, 768]
+dtype: fp16
+put_all_embeddings_on_device: true
+retrieval_batch_size: 131072
+top_k: 1000
+do_eval: true
+include_content: true
+metric_names: null # If not specified it defaults to a specific list of metrics
+ignore_same_id: true
+query_max_length: 64
