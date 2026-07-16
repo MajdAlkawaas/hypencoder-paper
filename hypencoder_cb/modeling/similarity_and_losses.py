@@ -468,21 +468,19 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
 
         total_loss = torch.tensor(0.0, device=item_embeddings.device)
         num_dims_supervised = len(self.matryoshka_dims)
-        
 
         matryoshka_qnets = self.matryoshka_qnet_factory.build(
-                                            full_matrices,
-                                            full_vectors,
-                                            self.matryoshka_dims,
-                                            is_training=True,
-                                            )
-        
+            full_matrices,
+            full_vectors,
+            self.matryoshka_dims,
+            is_training=True,
+        )
+
         # Loop through each specified Matryoshka dimension
 
         # TODO: Ensure that the keys are ordered.
         # TODO: Ensure that the dict contains the correct dims
         for dim, q_net_at_dim in matryoshka_qnets.items():
-            
             similarity_at_dim = no_in_batch_negatives_hypecoder_similarity(
                 q_net_at_dim, item_embeddings
             )
@@ -491,7 +489,7 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
             triplet_similarity = pos_neg_triplets_from_similarity(similarity_at_dim)
             loss_at_dim = self._loss(triplet_similarity, labels)
 
-            # TODO: Add option for weighted loss 
+            # TODO: Add option for weighted loss
             total_loss += loss_at_dim
 
         average_loss = total_loss / num_dims_supervised

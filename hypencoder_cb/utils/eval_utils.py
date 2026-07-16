@@ -3,9 +3,7 @@ from collections import defaultdict
 from numbers import Number
 from pathlib import Path
 from typing import Optional
-
 import ir_measures
-
 from hypencoder_cb.utils.jsonl_utils import JsonlReader
 
 DEFAULT_METRICS = [
@@ -99,6 +97,8 @@ def calculate_metrics_to_file(
         run, qrels, metric_names=metric_names
     )
 
+
+##################################################################
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     aggregated_filename = output_folder / "aggregated_metrics.json"
@@ -111,6 +111,7 @@ def calculate_metrics_to_file(
 
     with open(per_query_filename, "w") as f:
         json.dump(per_query_metrics, f, sort_keys=True, indent=4)
+##################################################################
 
     pretty_aggregated_filename = aggregated_filename.with_suffix(".txt")
     pretty_print_aggregated_metrics_to_file(
