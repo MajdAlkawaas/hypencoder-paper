@@ -2,7 +2,6 @@ import logging
 import os
 import fire
 from omegaconf import OmegaConf
-from tqdm import tqdm
 
 # Import all necessary components from your codebase
 from hypencoder_cb.inference.args import RetrievalConfig
