@@ -11,7 +11,7 @@ The primary contribution of this project is a single, adaptive retrieval model c
 
 <!-- Placeholder for Matryoshka Hypencoder Diagram -->
 <p align="center">
-  <img src="./hypencoder-paper/imgs/matryoshka_hypencoder_with_background.png" width="700">
+  <img src="./imgs/matryoshka_hypencoder_with_background.png" width="700">
   <br>
   <em>Figure 1: Overview of the Matryoshka Hypencoder architecture. The hyper-head generates a single set of full-size parameters, which can be truncated to form effective, nested Q-Nets of varying widths.</em>
 </p>
@@ -41,7 +41,7 @@ This research makes several key contributions to the field of neural information
 
 <!-- Placeholder for Throughput Diagram -->
 <p align="center">
-  <img src="./hypencoder-paper/imgs/document_throughput_with_background.png" width="700">
+  <img src="./imgs/document_throughput_with_background.png" width="700">
   <br>
   <em>Figure 2: Document scoring throughput (documents per second) on MS MARCO Dev, demonstrating the super-linear efficiency gains of smaller Q-Net dimensions.</em>
 </p>
