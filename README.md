@@ -11,7 +11,7 @@ The primary contribution of this project is a single, adaptive retrieval model c
 
 <!-- Placeholder for Matryoshka Hypencoder Diagram -->
 <p align="center">
-  <img src="./imgs/matryoshka_hypencoder_with_background.png" width="700">
+  <img src="./imgs/matryoshka_hypencoder_with_background.png" width="400">
   <br>
   <em>Figure 1: Overview of the Matryoshka Hypencoder architecture. The hyper-head generates a single set of full-size parameters, which can be truncated to form effective, nested Q-Nets of varying widths.</em>
 </p>
@@ -53,7 +53,7 @@ This project relies on a specific set of library versions for reproducibility. I
 
 **1. Clone the Repository:**
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/MajdAlkawaas/hypencoder-paper.git
 cd hypencoder-paper
 ```
 
@@ -70,10 +70,6 @@ pip install -r requirements.txt
 ```
 This will install the correct, compatible versions of `torch`, `transformers`, `datasets`, `pyarrow`, `numpy`, and all other necessary libraries.
 
-## Reproducing Experiments
-
-This repository is structured to make all experiments highly reproducible. The configuration files for all key experiments are located in `hypencoder_cb/train/configs/`. The final, collated results and statistical test outputs are available in the `analysis/` directory.
-
 ## Training a New Model
 
 The training pipeline is managed by `hypencoder_cb/train/train.py` and is configured via YAML files.
@@ -82,17 +78,10 @@ The training pipeline is managed by `hypencoder_cb/train/train.py` and is config
 To launch a training run, provide the path to a configuration file. For example, to launch the final Matryoshka transfer learning experiment:
 ```bash
 # For single-GPU
-python hypencoder_cb/train/train.py hypencoder_cb/train/configs/final_matryoshka_transfer.yaml
+python hypencoder_cb/train/train.py hypencoder_cb/train/configs/matryoshka_training.yaml
 
-# For multi-GPU using accelerate
-accelerate launch hypencoder_cb/train/train.py hypencoder_cb/train/configs/final_matryoshka_transfer.yaml
 ```
-
-#### **Experiment Tracking with Weights & Biases**
-The `Trainer` is configured for easy integration with Weights & Biases.
-1.  Run `wandb login` in your terminal and provide your API key.
-2.  Set your project name: `export WANDB_PROJECT="hypencoder-dissertation"`
-3.  In your YAML config file, add `report_to: "wandb"` and a descriptive `run_name` under `hf_trainer_config`. The Trainer will automatically stream all metrics, configurations, and system stats to your W&B dashboard.
+ 
 
 ## Evaluation Framework
 
@@ -121,7 +110,6 @@ python run_evaluation.py --config_path="path/to/your/evaluation_config.yaml"
 ```
 The script will automatically handle data loading, model loading (including the necessary surgical fixes for certain checkpoints), and looping through all specified models, datasets, and (for Matryoshka) dimensions. Results are saved in a structured directory tree under the `base_output_dir` specified in the config.
 
-#### **4. Statistical Significance Testing**
-A script is provided at `analysis/run_statistical_tests.py` to perform paired t-tests on the generated `per_query_metrics.json` files, allowing for rigorous comparison between different models.
+
 
 ```
