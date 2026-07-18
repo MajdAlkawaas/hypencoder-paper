@@ -21,7 +21,6 @@ The primary contribution of this project is a single, adaptive retrieval model c
     <p>
         <a href="#key-contributions-and-findings">Key Findings</a> |
         <a href="#installation">Installation</a> |
-        <a href="#reproducing-experiments">Reproducing Experiments</a> |
         <a href="#training-a-new-model">Training</a> |
         <a href="#evaluation-framework">Evaluation</a>
     <p>
@@ -85,7 +84,7 @@ python hypencoder_cb/train/train.py hypencoder_cb/train/configs/matryoshka_hypen
 
 ## Evaluation Framework
 
-The evaluation workflow is managed by a single, powerful orchestrator script: `run_evaluation.py`. This script reads a central YAML configuration file to run complex evaluation campaigns (e.g., multiple models vs. multiple datasets).
+The evaluation workflow is managed by a single, powerful orchestrator script: `hypencoder_cb/inference/run_evaluation.py`. This script reads a central YAML configuration file to run complex evaluation campaigns (e.g., multiple models vs. multiple datasets).
 
 #### **1. Encoding a Corpus**
 Before evaluation, document corpora must be pre-processed into embeddings using `hypencoder_cb/inference/encode.py`.
@@ -93,19 +92,19 @@ Before evaluation, document corpora must be pre-processed into embeddings using 
 python -m hypencoder_cb.inference.encode \
     --model_name_or_path="path/to/your/trained_model" \
     --output_path="./encoded_corpora/my_corpus.docs" \
-    --ir_dataset_name="name-of-ir-dataset" \
+    --ir_dataset_name="name-of-ir-dataset"
 
 ```
 
 #### **2. Configuring an Evaluation Campaign**
-Create a YAML file (e.g., `evaluation_config.yaml`) to define the experiments. This file specifies the `run_type` ("standard" or "matryoshka"), the models to test, the datasets to evaluate on, and other hyperparameters.
+Create a YAML file (e.g., `evaluation_config.yaml`) to define the experiments. This file specifies the `model_type` ("standard" or "matryoshka"), the models to test, the datasets to evaluate on, and other hyperparameters.
 
 See `hypencoder_cb/inference/configs/retrieval_matryoshka_config.yaml` for a template.
 
 #### **3. Running the Evaluation Campaign**
 Launch the entire campaign with a single command:
 ```bash
-python run_evaluation.py --config_path="path/to/your/evaluation_config.yaml"
+python hypencoder_cb/inference/run_evaluation.py --config_path="path/to/your/evaluation_config.yaml"
 ```
 The script will automatically handle data loading, model loading (including the necessary surgical fixes for certain checkpoints), and looping through all specified models, datasets, and (for Matryoshka) dimensions. Results are saved in a structured directory tree under the `base_output_dir` specified in the config.
 

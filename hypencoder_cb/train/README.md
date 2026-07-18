@@ -128,7 +128,7 @@ model_config:
     - {}
     - {"only_use_first_item": true}
 ```
-If your desired model is a Matryoshka Hypencoder you will need to add the `matryoshka_dims` parameter to the `converter_kwargs`. Please refer to the provided example `train/configs/matryoshka_hypencoder_6_layers.yaml`
+If your desired model is a Matryoshka Hypencoder you will need to add the `matryoshka_dims` parameter to the `loss_kwargs`. Please refer to the provided example `train/configs/matryoshka_hypencoder_6_layers.yaml`
 ```
 model_config:
   loss_type:
