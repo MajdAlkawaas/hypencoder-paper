@@ -106,8 +106,7 @@ Launch the entire campaign with a single command:
 ```bash
 python hypencoder_cb/inference/run_evaluation.py --config_path="path/to/your/evaluation_config.yaml"
 ```
-The script will automatically handle data loading, model loading (including the necessary surgical fixes for certain checkpoints), and looping through all specified models, datasets, and (for Matryoshka) dimensions. Results are saved in a structured directory tree under the `base_output_dir` specified in the config.
 
-
-
+## Citation (Coming soon)
+```
 ```
