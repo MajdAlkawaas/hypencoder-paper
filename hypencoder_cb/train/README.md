@@ -1,5 +1,5 @@
 
-## Overview
+## Overview (Original Training system created for the original Hypencoder paper with the Matryoshka training)
 The main training code is in `train.py`. It uses arguments from `args.py` which are passed as a yaml config file. To customize training you can edit the yaml configuration file.
 
 To run training call the training script with a path to a training configuration like so:
@@ -127,6 +127,14 @@ model_config:
   loss_kwargs:
     - {}
     - {"only_use_first_item": true}
+```
+If your desired model is a Matryoshka Hypencoder you will need to add the `matryoshka_dims` parameter to the `converter_kwargs`. Please refer to the provided example `train/configs/matryoshka_hypencoder_6_layers.yaml`
+```
+model_config:
+  loss_type:
+    - matryoshka_dim_margin_mse
+  loss_kwargs:
+    - {"matryoshka_dims": [128, 256, 512]}
 ```
 
 Above you can see the two losses in this repo are and the two used to train the main Hypencoder. MarginMSE is a knowledge distillation loss which requires your data to include the "score" key with teacher scores for each query-item pair.
