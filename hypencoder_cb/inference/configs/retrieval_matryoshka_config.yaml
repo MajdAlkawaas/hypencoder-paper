@@ -2,8 +2,8 @@ model_type: matryoshka
 models_to_evaluate:
   - name_or_path: "majdalkawaas/matryoshka-hypencoder" 
 datasets_to_evaluate:
-  - ir_dataset_name: "beir/webis-touche2020/v2"
-    encoding_path: "./encoded_items/beir_webis-touche2020_v2.docs"
+  - ir_dataset_name: # for example "beir/webis-touche2020/v2"
+    encoding_path: # for example "./encoded_items/beir_webis-touche2020_v2.docs"
     query_jsonl: null
     qrel_json: null
     query_id_key: "id"
