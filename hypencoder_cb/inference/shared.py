@@ -176,11 +176,9 @@ def load_encoded_items_from_disk(
     if target_dtype.lower() in ["float16", "fp16"]:
         # If the user wants float16, use the specific float16 schema.
         schema_to_use = EncodedItemFloat16
-        print("HERE: float16")
     else:
         # Otherwise, use the default float32 schema.
         schema_to_use = EncodedItem
-        print("HERE: float32")
 
     return DocList[schema_to_use].pull(
         f"file://{encoded_items_path}", show_progress=True
