@@ -78,7 +78,7 @@ The training pipeline is managed by `hypencoder_cb/train/train.py` and is config
 To launch a training run, provide the path to a configuration file. For example, to launch the final Matryoshka transfer learning experiment:
 ```bash
 # For single-GPU
-python hypencoder_cb/train/train.py hypencoder_cb/train/configs/matryoshka_training.yaml
+python hypencoder_cb/train/train.py hypencoder_cb/train/configs/matryoshka_hypencoder_6_layers.yaml 
 
 ```
  
@@ -92,16 +92,15 @@ Before evaluation, document corpora must be pre-processed into embeddings using 
 ```bash
 python -m hypencoder_cb.inference.encode \
     --model_name_or_path="path/to/your/trained_model" \
-    --output_path="./encoded_corpora/my_corpus.docs_fp16" \
+    --output_path="./encoded_corpora/my_corpus.docs" \
     --ir_dataset_name="name-of-ir-dataset" \
-    --dtype="fp16" \
-    --batch_size=4096
+
 ```
 
 #### **2. Configuring an Evaluation Campaign**
 Create a YAML file (e.g., `evaluation_config.yaml`) to define the experiments. This file specifies the `run_type` ("standard" or "matryoshka"), the models to test, the datasets to evaluate on, and other hyperparameters.
 
-See `hypencoder_cb/inference/configs/example_eval_config.yaml` for a template.
+See `hypencoder_cb/inference/configs/retrieval_matryoshka_config.yaml` for a template.
 
 #### **3. Running the Evaluation Campaign**
 Launch the entire campaign with a single command:
