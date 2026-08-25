@@ -5,7 +5,7 @@ This repo is still a work-in-progress, but all the core code, data, and models a
 
 
 
-This repository contains the code and experiments for the [The Matryoshka Hypencoder (Paper coming soon)]() This work builds upon the original [Hypencoder architecture](https://arxiv.org/abs/2502.05364) by Killingback et al., extending it with a novel, flexible training paradigm inspired by Matryoshka Representation Learning (MRL).
+This repository contains the code and experiments for the [The Matryoshka Hypencoder](https://arxiv.org/pdf/2607.17457) you can also find our proposed [Matryoshka Hypencoder model on huggingface](https://huggingface.co/majdalkawaas/matryoshka-hypencoder) This work builds upon the original [Hypencoder architecture](https://arxiv.org/abs/2502.05364) by Killingback et al., extending it with a novel, flexible training paradigm inspired by Matryoshka Representation Learning (MRL).
 
 The primary contribution of this project is a single, adaptive retrieval model capable of generating query-specific scoring functions (Q-Nets) of variable widths. This allows for a dynamic trade-off between retrieval effectiveness and computational efficiency at inference time.
 
