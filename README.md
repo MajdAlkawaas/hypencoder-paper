@@ -109,4 +109,21 @@ python hypencoder_cb/inference/run_evaluation.py --config_path="path/to/your/eva
 
 ## Citation (Coming soon)
 ```
+@inproceedings{10.1145/3805712.3809980,
+author = {Alkawaas, Majd and MacAvaney, Sean},
+title = {The Matryoshka Hypencoder},
+year = {2026},
+isbn = {9798400725999},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3805712.3809980},
+doi = {10.1145/3805712.3809980},
+abstract = {The Hypencoder is a recently-proposed retrieval approach that encodes queries as shallow neural networks (''Q-Nets'') that estimate relevance over pre-computed document embeddings. Inspired by Matryoshka Representation Learning, we show that the Hypencoder can be extended to support multiple sizes of Q-Nets, allowing trade-offs between effectiveness and efficiency when deployed. We find that this ''Matryoshka Hypencoder'' achieves comparable in-domain effectiveness with approximately 7{\texttimes} fewer active parameters in-domain and half as many active parameters out-of-domain, which corresponds to a 1.6–3.4{\texttimes} increase in scoring throughput. This work paves the way for practical deployment of Hypencoders. https://github.com/MajdAlkawaas/hypencoder-paper},
+booktitle = {Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {3574–3579},
+numpages = {6},
+keywords = {hypencoder, matryoshka embeddings, passage retrieval},
+location = {Australia},
+series = {SIGIR '26}
+}
 ```
