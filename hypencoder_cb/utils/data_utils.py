@@ -1,7 +1,6 @@
 import json
 from collections import defaultdict
 from numbers import Number
-from typing import Dict
 
 import ir_datasets
 
@@ -10,7 +9,7 @@ def load_qrels_from_ir_datasets(
     dataset_name: str,
     binarize: bool = False,
     binarize_threshold: int = 1,
-) -> Dict[str, Dict[str, Number]]:
+) -> dict[str, dict[str, Number]]:
     """
     Load the qrels from ir_datasets.
 
@@ -36,7 +35,7 @@ def load_qrels_from_ir_datasets(
 
 def load_qrels_from_json(
     input_json: str,
-) -> Dict[str, Dict[str, Number]]:
+) -> dict[str, dict[str, Number]]:
     """
     Load the qrels from a json file.
 

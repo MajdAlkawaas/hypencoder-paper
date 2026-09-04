@@ -1,30 +1,33 @@
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Optional
 
 import fire
 from omegaconf import OmegaConf
+
 
 # Added LoggingConfig dataclass for controlling the logging behavior
 @dataclass
 class LoggingConfig:
     """Configuration for custom logging."""
+
     # Controls the overall script logging level.
     # script_log_level: str["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     script_log_level: str = "INFO"
     # Toggles verbose logging inside the DataCollator for debugging batches
-    log_collator : bool = False
+    log_collator: bool = False
+
 
 @dataclass
 class HypencoderModelConfig:
     tokenizer_pretrained_model_name_or_path: Optional[str] = None
 
-    query_encoder_kwargs: Dict = field(default_factory=dict)
-    passage_encoder_kwargs: Dict = field(default_factory=dict)
+    query_encoder_kwargs: dict = field(default_factory=dict)
+    passage_encoder_kwargs: dict = field(default_factory=dict)
 
-    # Union[str, List[str]]
+    # str | list[str]
     loss_type: Any = field(default_factory=lambda: [])
-    # Union[Dict[str, Any], List[Dict[str, Any]]]
+    # dict[str, Any] | list[dict[str, Any]]
     loss_kwargs: Any = field(default_factory=list)
 
     checkpoint_path: Optional[str] = None
@@ -45,7 +48,7 @@ class HypencoderDataConfig:
     validation_data_split: str = "train"
 
     positive_filter_type: str = "first"
-    positive_filter_kwargs: Optional[Dict[str, Any]] = None
+    positive_filter_kwargs: Optional[dict[str, Any]] = None
 
     label_key: Optional[str] = "score"
 
@@ -93,7 +96,7 @@ class HFTrainerConfig:
 
     load_best_model_at_end: bool = False
     metric_for_best_model: Optional[str] = None
-    
+
     # save_only_model: bool = False
     save_safetensors: bool = True
 
@@ -108,7 +111,7 @@ class HFTrainerConfig:
     ddp_find_unused_parameters: Optional[bool] = True
     # str or bool string options are: "full_shard", "auto_wrap", ...
     fsdp: Any = False
-    fsdp_config: Optional[Dict[str, Any]] = None
+    fsdp_config: Optional[dict[str, Any]] = None
 
     report_to: str = "none"
 
@@ -125,24 +128,26 @@ class HFTrainerConfig:
 
 @dataclass
 class HypencoderTrainerConfig:
-    hf_trainer_config: HFTrainerConfig = HFTrainerConfig(
-        output_dir="/tmp/output/"
+    hf_trainer_config: HFTrainerConfig = field(
+        default_factory=lambda: HFTrainerConfig(output_dir="/tmp/output/")
     )
     resume_from_checkpoint: Optional[Any] = False
 
 
 @dataclass
 class HypencoderTrainingConfig:
-    model_config:HypencoderModelConfig = HypencoderModelConfig(
+    model_config: HypencoderModelConfig = field(default_factory=HypencoderModelConfig)
+    data_config: HypencoderDataConfig = field(
+        default_factory=lambda: HypencoderDataConfig(training_data_jsonl="")
     )
-    data_config:HypencoderDataConfig = HypencoderDataConfig(
-        training_data_jsonl="",
-    )
-    trainer_config:HypencoderTrainerConfig = HypencoderTrainerConfig(
-        hf_trainer_config=HFTrainerConfig(),
+    trainer_config: HypencoderTrainerConfig = field(
+        default_factory=lambda: HypencoderTrainerConfig(
+            hf_trainer_config=HFTrainerConfig()
+        )
     )
     # Added the logging configs
     logging_config: LoggingConfig = field(default_factory=LoggingConfig)
+
 
 def relative_file_path_to_abs_path(path: str) -> str:
     return os.path.join(os.path.dirname(__file__), path)

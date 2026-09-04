@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import torch
 from transformers import PretrainedConfig, PreTrainedModel
@@ -18,7 +18,7 @@ class DualEncoderOutput(ModelOutput):
     passage_output: Optional[EncoderOutput] = None
     similarity: Optional[torch.Tensor] = None
     loss: Optional[torch.Tensor] = None
-    to_log: Optional[Dict] = None
+    to_log: Optional[dict] = None
 
 
 class BaseDualEncoderConfig(PretrainedConfig):
@@ -26,10 +26,10 @@ class BaseDualEncoderConfig(PretrainedConfig):
         self,
         query_encoder_type: str = "",
         passage_encoder_type: str = "",
-        query_encoder_kwargs: Dict = {},
-        passage_encoder_kwargs: Dict = {},
-        loss_type: Union[str, List[str]] = "",
-        loss_kwargs: Union[Dict[str, Any], List[Dict[str, Any]]] = {},
+        query_encoder_kwargs: dict = {},
+        passage_encoder_kwargs: dict = {},
+        loss_type: Union[str, list[str]] = "",
+        loss_kwargs: Union[dict[str, Any], list[dict[str, Any]]] = {},
         shared_encoder: bool = False,
         **kwargs,
     ):
@@ -56,11 +56,16 @@ class BaseDualEncoder(PreTrainedModel):
     config_class = BaseDualEncoderConfig
 
     def __init__(self, config: BaseDualEncoderConfig):
-        super(BaseDualEncoder, self).__init__(config)
-        self._get_similarity_loss(config)
-        self.similarity_loss_forward_kwargs = [
-            {} for _ in range(len(self.similarity_losses))
-        ]
+        super().__init__(config)
+        # super(BaseDualEncoder, self).__init__(config)
+        # self._get_similarity_loss(config)
+        # self.similarity_loss_forward_kwargs = [
+        #     {} for _ in range(len(self.similarity_losses))
+        # ]
+
+        # We will initialize this as an empty list here.
+        self.similarity_losses = []
+        self.similarity_loss_forward_kwargs = []
 
     def _get_similarity_loss(self, config: BaseDualEncoderConfig):
         raise NotImplementedError()
@@ -85,8 +90,8 @@ class BaseDualEncoder(PreTrainedModel):
         passage_input_ids: Optional[torch.LongTensor] = None,
         passage_attention_mask: Optional[torch.LongTensor] = None,
         labels: Optional[torch.Tensor] = None,
-        query_input_kwargs: Optional[Dict] = None,
-        passage_input_kwargs: Optional[Dict] = None,
+        query_input_kwargs: Optional[dict] = None,
+        passage_input_kwargs: Optional[dict] = None,
         full_output: bool = False,
     ) -> DualEncoderOutput:
         if query_input_kwargs is None:
@@ -97,8 +102,7 @@ class BaseDualEncoder(PreTrainedModel):
 
         if query_input_ids is None and passage_input_ids is None:
             raise ValueError(
-                "At least one of query_input_ids or passage_input_ids"
-                " must be provided"
+                "At least one of query_input_ids or passage_input_ids must be provided"
             )
 
         query_output = None
@@ -124,6 +128,15 @@ class BaseDualEncoder(PreTrainedModel):
 
         if self.training or full_output:
             to_log = {}
+
+            # If we are in a training/evaluation context, we MUST have a loss function.
+            if not self.similarity_losses:
+                raise ValueError(
+                    f"The model '{self.__class__.__name__}' is in training or full_output mode "
+                    "but has no similarity losses defined. Please ensure that the "
+                    "_get_similarity_loss() method is correctly implemented and "
+                    "populates the 'self.similarity_losses' list in the constructor."
+                )
 
             total_similarity_loss = torch.tensor(0.0, device=self.device)
             for i, similarity_loss in enumerate(self.similarity_losses):

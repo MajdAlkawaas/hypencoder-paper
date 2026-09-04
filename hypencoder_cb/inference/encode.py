@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import fire
 import torch
@@ -6,9 +6,9 @@ from transformers import AutoTokenizer
 
 from hypencoder_cb.inference.shared import (
     BaseEncoder,
+    VectorEncodedRepresentation,
     encode_ir_dataset_items_to_disk,
     encode_jsonl_items_to_disk,
-    VectorEncodedRepresentation
 )
 from hypencoder_cb.modeling.hypencoder import (
     HypencoderDualEncoder,
@@ -60,7 +60,7 @@ class InferenceTextEncoder(BaseEncoder):
         self.device = device
         self.max_length = max_length
 
-    def batch_encode(self, texts: List[str]) -> VectorEncodedRepresentation:
+    def batch_encode(self, texts: list[str]) -> VectorEncodedRepresentation:
         """
 
         Args:
@@ -132,9 +132,7 @@ def do_encoding(
     """
 
     if jsonl_path is not None and ir_dataset_name is not None:
-        raise ValueError(
-            "Only one of jsonl_path and ir_dataset_name can be provided."
-        )
+        raise ValueError("Only one of jsonl_path and ir_dataset_name can be provided.")
 
     encoder = InferenceTextEncoder(
         model_name_or_path=model_name_or_path,

@@ -14,9 +14,7 @@ def JsonlReader(filepath: str, **kwargs):
 
 
 @contextmanager
-def JsonlWriter(
-    filepath: str, check_exists: bool = False, mode: str = "w", **kwargs
-):
+def JsonlWriter(filepath: str, check_exists: bool = False, mode: str = "w", **kwargs):
     filepath = resolve_path(filepath)
 
     path_object = pathlib.Path(filepath)

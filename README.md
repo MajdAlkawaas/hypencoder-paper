@@ -1,238 +1,122 @@
-# Hypencoder
-Official Repository for "Hypencoder: Hypernetworks for Information Retrieval".
+# Matryoshka Hypencoder
+This is the official Repository for "The Matryoshka Hypencoder".
 
-This repo is still a work-in-progress, but all the core code, data, and models are now available. This means you can train your own Hypencoder, use a pre-trained Hypencoder off-the-shelf, and reproduce the major results from the paper exactly.
-
-Todos:
-- [ ] Check training code works as expected
-- [ ] Check approximate retrieval code works as expected
-- [ ] Upload BE-Base checkpoint.
-- [ ] Add retrieval functionality for bi-encoders.
+This repo is still a work-in-progress, but all the core code, data, and models are now available. This means you can evaluate the Matryoshka Hypencoder, use a pre-trained Matryoshka Hypencoder off-the-shelf, and reproduce the major results from the paper exactly.
 
 
-![main_image](./imgs/main_figure.jpg)
+
+This repository contains the code and experiments for the [The Matryoshka Hypencoder](https://arxiv.org/pdf/2607.17457) you can also find our proposed [Matryoshka Hypencoder model on huggingface](https://huggingface.co/majdalkawaas/matryoshka-hypencoder) This work builds upon the original [Hypencoder architecture](https://arxiv.org/abs/2502.05364) by Killingback et al., extending it with a novel, flexible training paradigm inspired by Matryoshka Representation Learning (MRL).
+
+The primary contribution of this project is a single, adaptive retrieval model capable of generating query-specific scoring functions (Q-Nets) of variable widths. This allows for a dynamic trade-off between retrieval effectiveness and computational efficiency at inference time.
+
+<!-- Placeholder for Matryoshka Hypencoder Diagram -->
+<p align="center">
+  <img src="./imgs/matryoshka_hypencoder_with_background.png" width="400">
+  <br>
+  <em>Figure 1: Overview of the Matryoshka Hypencoder architecture. The hyper-head generates a single set of full-size parameters, which can be truncated to form effective, nested Q-Nets of varying widths.</em>
+</p>
+<!-- End Placeholder -->
 
 <h4 align="center">
     <p>
-        <a href=#installation>Installation</a> |
-        <a href=#quick-start>Quick Start</a> |
-        <a href="https://arxiv.org/pdf/2502.05364">Paper</a> |
-        <a href=#models>Models</a> |
-        <a href=#data>Data</a> |
-        <a href=#artifacts>Artifacts</a> |
-        <a href=#training>Training</a> |
-        <a href=#collaboration>Collaboration</a> |
-        <a href="#cite">Citation</a>
+        <a href="#key-contributions-and-findings">Key Findings</a> |
+        <a href="#installation">Installation</a> |
+        <a href="#training-a-new-model">Training</a> |
+        <a href="#evaluation-framework">Evaluation</a>
     <p>
 </h4>
 
+## Key Contributions & Findings
+
+This research makes several key contributions to the field of neural information retrieval:
+
+1.  **Viability of Frozen-Encoder Training**: We demonstrate that a Hypencoder can be trained with its BERT backbones frozen, achieving performance statistically comparable to the original, resource-intensive end-to-end trained model. This establishes a computationally feasible paradigm for developing and experimenting with Hypencoder architectures.
+
+2.  **Development of the Matryoshka Hypencoder**: We successfully adapt the MRL principle from embedding vectors to the parameter space of a function generator. Through a robust transfer learning methodology, we fine-tuned a pre-trained hyper-head with a multi-objective loss to produce nested, variable-width Q-Nets.
+
+3.  **Demonstrated Performance-Efficiency Trade-off**: Our final Matryoshka model exhibits the desired "graceful degradation" property. On in-domain benchmarks like TREC Deep Learning, the model can be truncated to use **7x fewer parameters** (256-dim vs. 768-dim Q-Net) with no statistically significant loss in retrieval effectiveness.
+
+4.  **Quantified Efficiency Gains**: This parameter reduction translates to a massive gain in scoring throughput. As shown below, smaller Q-Nets are progressively faster, with the 128-dimension Q-Net providing up to a **6x speedup** in query latency on large corpora compared to the baseline.
+
+<!-- Placeholder for Throughput Diagram -->
+<p align="center">
+  <img src="./imgs/document_throughput_with_background.png" width="700">
+  <br>
+  <em>Figure 2: Document scoring throughput (documents per second) on MS MARCO Dev, demonstrating the super-linear efficiency gains of smaller Q-Net dimensions.</em>
+</p>
+<!-- End Placeholder -->
+
 ## Installation
-### Copy the Repo
-```
-gh repo clone jfkback/hypencoder-paper
-```
 
-### Install locally with pip
-```
-pip install -e /hypencoder-paper
-```
+This project relies on a specific set of library versions for reproducibility. It is highly recommended to use a `conda` or `venv` virtual environment.
 
-### Required Libraries
-The core libraries required are:
-- `torch`
-- `transformers`
-
-with just the core libraries you can use Hypencoder to create q-nets and
-document embeddings.
-
-To use the code for encoding and retrieval the following additional libraries
-are required:
-- `fire`
-- `tqdm`
-- `ir_datasets`
-- `jsonlines`
-- `docarray`
-- `numpy`
-- `ir_measures`
-
-To train a model you will need:
-- `fire`
-- `omegaconf`
-- `datasets`
-
-## Quick Start
-#### Using the pretrained Hypencoders as stand-alone models
-```python
-from hypencoder_cb.modeling.hypencoder import Hypencoder, HypencoderDualEncoder, TextEncoder
-from transformers import AutoTokenizer
-
-dual_encoder = HypencoderDualEncoder.from_pretrained("jfkback/hypencoder.6_layer")
-tokenizer = AutoTokenizer.from_pretrained("jfkback/hypencoder.6_layer")
-
-query_encoder: Hypencoder = dual_encoder.query_encoder
-passage_encoder: TextEncoder = dual_encoder.passage_encoder
-
-queries = [
-    "how many states are there in india",
-    "when do concussion symptoms appear",
-]
-
-passages = [
-    "India has 28 states and 8 union territories.",
-    "Concussion symptoms can appear immediately or up to 72 hours after the injury.",
-]
-
-query_inputs = tokenizer(queries, return_tensors="pt", padding=True, truncation=True)
-passage_inputs = tokenizer(passages, return_tensors="pt", padding=True, truncation=True)
-
-q_nets = query_encoder(input_ids=query_inputs["input_ids"], attention_mask=query_inputs["attention_mask"]).representation
-passage_embeddings = passage_encoder(input_ids=passage_inputs["input_ids"], attention_mask=passage_inputs["attention_mask"]).representation
-
-# The passage_embeddings has shape (2, 768), but the q_nets expect the shape
-# (num_queries, num_items_per_query, input_hidden_size) so we need to reshape
-# the passage_embeddings.
-
-# In the simple case where each q_net only takes one passage, we can just
-# reshape the passage_embeddings to (num_queries, 1, input_hidden_size).
-passage_embeddings_single = passage_embeddings.unsqueeze(1)
-scores = q_nets(passage_embeddings_single)  # Shape (2, 1, 1)
-# [
-#    [[-12.1192]],
-#    [[-13.5832]]
-# ]
-
-# In the case where each q_net takes both passages we can reshape the
-# passage_embeddings to (num_queries, 2, input_hidden_size).
-passage_embeddings_double = passage_embeddings.repeat(2, 1).reshape(2, 2, -1)
-scores = q_nets(passage_embeddings_double)  # Shape (2, 2, 1)
-# [
-#    [[-12.1192], [-32.7046]],
-#    [[-34.0934], [-13.5832]]
-# ]
+**1. Clone the Repository:**
+```bash
+git clone https://github.com/MajdAlkawaas/hypencoder-paper.git
+cd hypencoder-paper
 ```
 
-#### Encoding and Retrieving
-If the queries and documents you want to retrieve exist as a dataset in the IR Dataset library no additional work is needed to encode and retrieve from the dataset. If the data is not a part of this library you will need two JSONL files for the documents and queries. These must have the format:
-```
-{"<id_key>": "afei1243", "<text_key>": "This is some text"}
-...
-```
-where `<id_key>` and `<text_key>` can be any string and do not have to be the same for the document and query file.
-
-##### Encoding
-```
-export ENCODING_PATH="..."
-export MODEL_NAME_OR_PATH="jfkback/hypencoder.6_layer"
-python hypencoder_cb/inference/encode.py \
---model_name_or_path=$MODEL_NAME_OR_PATH \
---output_path=$ENCODING_PATH \
---jsonl_path=path/to/documents.jsonl \
---item_id_key=<id_key> \
---item_text_key=<text_key>
-```
-For all the arguments and information on using IR Datasets type:
-`python hypencoder_cb/inference/encode.py --help`.
-
-##### Retrieve
-The values of `ENCODING_PATH` and `MODEL_NAME_OR_PATH` should be the same as
-those used in the encoding step.
-```
-export ENCODING_PATH="..."
-export MODEL_NAME_OR_PATH="jfkback/hypencoder.6_layer"
-export RETRIEVAL_DIR="..."
-python hypencoder_cb/inference/retrieve.py \
---model_name_or_path=$MODEL_NAME_OR_PATH \
---encoded_item_path=$ENCODING_PATH \
---output_dir=$RETRIEVAL_DIR \
---query_jsonl=path/to/queries.jsonl \
---do_eval=False \
---query_id_key=<id_key> \
---query_text_key=<text_key> \
---query_max_length=64 \
---top_k=1000
-```
-For all the arguments and information on using IR Datasets type:
-`python hypencoder_cb/inference/retrieve.py --help`.
-
-##### Evaluation
-Evaluation is done automatically when `hypencoder_cb/inference/retrieve.py` is called so long as `--do_eval=True`. If you are not using an IR Dataset you will need to provide the qrels with the argument `--qrel_json`. The qrels JSON should be in the format:
-```
-{
-    "qid1": {
-        "pid8": relevance_value (float),
-        "pid65": relevance_value (float),
-        ...
-    }.
-    "qid2": {
-        ...
-    },
-    ...
-}
+**2. Create a Conda Environment:**
+```bash
+conda create -n hypencoder python=3.10
+conda activate hypencoder
 ```
 
-#### Custom Q-Nets
-In the paper we only looked at simple linear q-nets but in theory any type of neural network can be used. The code in this repository is flexible enough to support any q-net whose only learnable parameters can be expressed as a set of matrices and vectors. This should include almost every neural network.
-
-To build a custom q-net you will need to make a new q-net converter similar to the existing one `RepeatedDenseBlockConverter`. This converter must have the following functions and properties:
-1. `weight_shapes` should be a property which is a list of tuples indicating the size of the weight matrices.
-2. `bias_shapes` should be a property which is a list of tuples indicating the size of the bias vectors.
-3. `__call__` which takes three arguments `matrices`, `vectors`,  and `is_training`. See `RepeatedDenseBlockConverter` for details on the type of these arguments. This method should
-return a callable object which excepts a torch tensor in the shape (num_queries, num_items_per_query, hidden_dim) and returns a tensor with the shape (num_queries, num_items_per_query, 1) which contains the relevance score for each query and associated item.
-
-
-## Training
-To train a model take a look at the training readme in `/train`.
-
-## Models
-We have uploaded the models from our experiments to Huggingface Hub. See quick start for more information on how to use these models and our paper for more information on how they were trained.
-<center>
-
-| Huggingface Repo | Number of Layers |
-|:------------------:|:------------------:|
-| [jfkback/hypencoder.2_layer](https://huggingface.co/jfkback/hypencoder.2_layer) |          2        |
-| [jfkback/hypencoder.4_layer](https://huggingface.co/jfkback/hypencoder.4_layer) |          4        |
-| [jfkback/hypencoder.6_layer](https://huggingface.co/jfkback/hypencoder.6_layer) |          6        |
-| [jfkback/hypencoder.8_layer](https://huggingface.co/jfkback/hypencoder.8_layer) |          8        |
-</center>
-
-
-## Data
-The data used for our experiments is in the table below:
-<center>
-
-| Link | Description |
-|:------------------:|------------------|
-| [jfkback/hypencoder-msmarco-training-dataset](https://huggingface.co/datasets/jfkback/hypencoder-msmarco-training-dataset) | Main training data used to train all our Hypencoder models and BE-base |
-</center>
-
-## Artifacts
-The artifacts from our experiments are in the table below:
-<center>
-
-| Link | Description |
-|:------------------:|------------------|
-| [hypencoder.6_layer.encoded_items](https://drive.google.com/drive/folders/1htoVx8fAVm-4ZfdssAXdw-_D-Kzs59dx?usp=sharing) | 6 layer Hypencoder embeddings for MSMARCO passage |
-| [hypencoder.6_layer.neighbor_graph](https://drive.google.com/file/d/1EhKuGxaFI51DDSDqsoAwiYRs1IdZATrk/view?usp=sharing) | 6 Layer Hypencoder passage neighbor  graph for MSMARCO passages - needed for approximate search. |
-| [Run Files](https://drive.google.com/drive/folders/1Q1U9Aa4bw_wK-EbAs9xCyUvBYxoUOVEG?usp=sharing) | All the run files for experiments |
-</center>
-
-The above artifacts are stored on Google Drive, if you want to download them without going through the UI, I suggest looking at [gdown](https://github.com/wkentaro/gdown) or the Google Cloud interface provided by [rclone](https://rclone.org/drive).
-
-We have also uploaded all the run files for our experiments (FollowIR coming soon). They are a custom JSONL format, but they should be pretty straightforward to convert to any other format. We may also add standard TREC run files in future if there is interest.
-
-## Collaboration
-If you are interested in working on new projects around Hypencoder or other areas of Information Retrieval/NLP and would like to collaborate feel welcome to reach out via [email](jkillingback@umass.edu) or [X](https://x.com/Julian_a42f9a):
-
-
-## Citation
+**3. Install Dependencies:**
+All required packages are specified in the `requirements.txt` file.
+```bash
+pip install -r requirements.txt
 ```
-@misc{killingback2025hypencoderhypernetworksinformationretrieval,
-      title={Hypencoder: Hypernetworks for Information Retrieval},
-      author={Julian Killingback and Hansi Zeng and Hamed Zamani},
-      year={2025},
-      eprint={2502.05364},
-      archivePrefix={arXiv},
-      primaryClass={cs.IR},
-      url={https://arxiv.org/abs/2502.05364},
-}
+This will install the correct, compatible versions of `torch`, `transformers`, `datasets`, `pyarrow`, `numpy`, and all other necessary libraries.
+
+## Training a New Model
+
+The training pipeline is managed by `hypencoder_cb/train/train.py` and is configured via YAML files.
+
+#### **Starting a Training Run**
+To launch a training run, provide the path to a configuration file. For example, to launch the final Matryoshka transfer learning experiment:
+```bash
+# For single-GPU
+python hypencoder_cb/train/train.py hypencoder_cb/train/configs/matryoshka_hypencoder_6_layers.yaml 
+
+```
+ 
+
+## Evaluation Framework
+
+The evaluation workflow is managed by a single, powerful orchestrator script: `hypencoder_cb/inference/run_evaluation.py`. This script reads a central YAML configuration file to run complex evaluation campaigns (e.g., multiple models vs. multiple datasets).
+
+#### **1. Encoding a Corpus**
+Before evaluation, document corpora must be pre-processed into embeddings using `hypencoder_cb/inference/encode.py`.
+```bash
+python -m hypencoder_cb.inference.encode \
+    --model_name_or_path="path/to/your/trained_model" \
+    --output_path="./encoded_corpora/my_corpus.docs" \
+    --ir_dataset_name="name-of-ir-dataset"
+
+```
+
+#### **2. Configuring an Evaluation Campaign**
+Create a YAML file (e.g., `evaluation_config.yaml`) to define the experiments. This file specifies the `model_type` ("standard" or "matryoshka"), the models to test, the datasets to evaluate on, and other hyperparameters.
+
+See `hypencoder_cb/inference/configs/retrieval_matryoshka_config.yaml` for a template.
+
+#### **3. Running the Evaluation Campaign**
+Launch the entire campaign with a single command:
+```bash
+python hypencoder_cb/inference/run_evaluation.py --config_path="path/to/your/evaluation_config.yaml"
+```
+
+## Citation (Coming soon)
+```
+@inproceedings{Alkawaas_2026,
+   title={The Matryoshka Hypencoder},
+   url={http://dx.doi.org/10.1145/3805712.3809980},
+   DOI={10.1145/3805712.3809980},
+   booktitle={Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+   publisher={ACM},
+   author={Alkawaas, Majd and MacAvaney, Sean},
+   year={2026},
+   month=July, pages={3574–3579} }
+
 ```

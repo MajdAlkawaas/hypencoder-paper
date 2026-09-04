@@ -1,22 +1,20 @@
+import logging
 import random
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import torch
 from transformers import AutoTokenizer
-import logging
-
 
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)
 
+
 def positive_filter_factory(
     type: str, **kwargs
-) -> Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]]:
+) -> Callable[[list[dict[str, Any]]], list[dict[str, Any]]]:
     if type == "type":
         return lambda items: [
-            item
-            for item in items
-            if item.get("type", "") == kwargs["positive_type"]
+            item for item in items if item.get("type", "") == kwargs["positive_type"]
         ]
     elif type == "first":
         return lambda items: items[:1]
@@ -31,7 +29,7 @@ def positive_filter_factory(
 
 def sampler_factory(
     type: str, num_samples, **kwargs
-) -> Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]]:
+) -> Callable[[list[dict[str, Any]]], list[dict[str, Any]]]:
     if type == "random":
         return lambda items: random.sample(items, k=num_samples)
     elif type == "all":
@@ -39,7 +37,6 @@ def sampler_factory(
 
 
 class GeneralDualEncoderCollator:
-
     def __init__(
         self,
         tokenizer,
@@ -47,28 +44,28 @@ class GeneralDualEncoderCollator:
         # --- ADD NEW PARAMETER ---
         log_level: bool = False,
         positive_filter: Union[
-            Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
+            Callable[[list[dict[str, Any]]], list[dict[str, Any]]], str
         ] = "type",
         positive_sampler: Union[
-            Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
+            Callable[[list[dict[str, Any]]], list[dict[str, Any]]], str
         ] = "random",
         negative_sampler: Union[
-            Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]], str
+            Callable[[list[dict[str, Any]]], list[dict[str, Any]]], str
         ] = "random",
         num_positives_to_sample: int = 1,
         label_key: Optional[str] = "score",
-        positive_filter_kwargs: Optional[Dict[str, Any]] = None,
-        positive_sampler_kwargs: Optional[Dict[str, Any]] = None,
-        negative_sampler_kwargs: Optional[Dict[str, Any]] = None,
+        positive_filter_kwargs: Optional[dict[str, Any]] = None,
+        positive_sampler_kwargs: Optional[dict[str, Any]] = None,
+        negative_sampler_kwargs: Optional[dict[str, Any]] = None,
         random_seed: int = 42,
         query_padding_mode: str = "longest",
         query_max_length: Optional[int] = None,
-        modify_query: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
-        query_pad_kwargs: Optional[Dict[str, Any]] = None,
-        item_pad_kwargs: Optional[Dict[str, Any]] = None,
+        modify_query: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
+        query_pad_kwargs: Optional[dict[str, Any]] = None,
+        item_pad_kwargs: Optional[dict[str, Any]] = None,
     ):
-        
-        self.log_level = log_level # <-- STORE THE FLAG
+
+        self.log_level = log_level  # <-- STORE THE FLAG
 
         random.seed(random_seed)
 
@@ -121,38 +118,41 @@ class GeneralDualEncoderCollator:
         self.query_pad_kwargs = query_pad_kwargs
         self.item_pad_kwargs = item_pad_kwargs
 
-    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def __call__(self, features: list[dict[str, Any]]) -> dict[str, Any]:
 
         # --- USE THE FLAG TO CONTROL LOGGING ---
         if self.log_level:
             logger.info(f"Received batch of {len(features)} features.")
-        
-        queries = [
-            {"input_ids": f["query"]["tokenized_content"]} for f in features
-        ]
+
+        queries = [{"input_ids": f["query"]["tokenized_content"]} for f in features]
 
         items, labels = [], []
 
         for i, feature in enumerate(features):
             if self.log_level:
-                logger.info(f"Processing feature #{i+1}/{len(features)}. Query ID: {feature['query'].get('id', 'N/A')}")
-            
+                logger.info(
+                    f"Processing feature #{i + 1}/{len(features)}. "
+                    f"Query ID: {feature['query'].get('id', 'N/A')}"
+                )
+
             # --- FLAG ---
             # print(f"[Collator]  - Available items: {len(feature['items'])}")
             positive_items = self.positive_filter(feature["items"])
 
             if self.log_level:
-                logger.info(f"  - Found {len(positive_items)} positive items after filtering.")
-
+                logger.info(
+                    f"  - Found {len(positive_items)} positive items after filtering."
+                )
 
             if len(positive_items) < self.num_positives_to_sample:
                 raise ValueError(
-                    f"Positive items less than num_positives_to_sample: {len(positive_items)}"
+                    "Positive items less than num_positives_to_sample: "
+                    f"{len(positive_items)}"
                 )
 
             selected_items = self.positive_sampler(positive_items)
 
-             # --- FLAG ---
+            # --- FLAG ---
             # print(f"[Collator]  - Sampled {len(selected_items)} positive items.")
             assert len(selected_items) == self.num_positives_to_sample
 
@@ -164,33 +164,35 @@ class GeneralDualEncoderCollator:
             # print(f"[Collator]  - Found {len(negative_items)} negative items.")
             if len(negative_items) < self.num_negatives_to_sample:
                 raise ValueError(
-                    f"Negative items less than num_negatives_to_sample: {len(negative_items)}"
+                    "Negative items less than num_negatives_to_sample: "
+                    f"{len(negative_items)}"
                 )
 
             selected_items += self.negative_sampler(negative_items)
 
             # --- FLAG ---
-            # print(f"[Collator]  - Sampled {self.num_negatives_to_sample} negative items. Total selected: {len(selected_items)}")
+            # print(
+            #     f"[Collator]  - Sampled {self.num_negatives_to_sample} negative "
+            #     f"items. Total selected: {len(selected_items)}"
+            # )
             assert (
                 len(selected_items)
                 == self.num_negatives_to_sample + self.num_positives_to_sample
             )
 
             items.extend(
-                [
-                    {"input_ids": item["tokenized_content"]}
-                    for item in selected_items
-                ]
+                [{"input_ids": item["tokenized_content"]} for item in selected_items]
             )
 
             if self.label_key is not None:
-                labels.append(
-                    [item[self.label_key] for item in selected_items]
-                )
+                labels.append([item[self.label_key] for item in selected_items])
 
         if self.log_level:
-            logger.info(f"Finished processing all features. Now padding {len(queries)} queries and {len(items)} items.")
-        
+            logger.info(
+                "Finished processing all features. Now padding "
+                f"{len(queries)} queries and {len(items)} items."
+            )
+
         query_inputs = self.tokenizer.pad(
             queries,
             padding=self.query_padding_mode,
@@ -211,7 +213,7 @@ class GeneralDualEncoderCollator:
 
         if self.log_level:
             logger.info("Padding complete. Finalizing batch.")
-            
+
         if labels == []:
             labels = None
         else:

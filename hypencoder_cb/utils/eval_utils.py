@@ -1,13 +1,10 @@
+import json
 from collections import defaultdict
 from numbers import Number
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
+from typing import Optional
 import ir_measures
-import json
-
 from hypencoder_cb.utils.jsonl_utils import JsonlReader
-
 
 DEFAULT_METRICS = [
     "nDCG@10",
@@ -23,7 +20,7 @@ DEFAULT_METRICS = [
 
 def pretty_print_aggregated_metrics(
     aggregated_metrics_json: str,
-    metric_name_ordering: Optional[List[str]] = None,
+    metric_name_ordering: Optional[list[str]] = None,
 ) -> str:
     with open(aggregated_metrics_json) as f:
         aggregated_metrics = json.load(f)
@@ -58,7 +55,7 @@ def pretty_print_aggregated_metrics(
 def pretty_print_aggregated_metrics_to_file(
     aggregated_metrics_json: str,
     output_file: Optional[str] = None,
-    metric_name_ordering: Optional[List[str]] = None,
+    metric_name_ordering: Optional[list[str]] = None,
 ) -> None:
     if output_file is None:
         output_file = Path(aggregated_metrics_json).with_suffix(".txt")
@@ -73,16 +70,14 @@ def pretty_print_aggregated_metrics_to_file(
 
 
 def calculate_metrics(
-    run: Dict[str, Dict[str, Number]],
-    qrels: Dict[str, Dict[str, Number]],
-    metric_names: Optional[List[str]] = None,
-) -> Tuple[Dict[str, Number], Dict[str, Dict[str, Number]]]:
+    run: dict[str, dict[str, Number]],
+    qrels: dict[str, dict[str, Number]],
+    metric_names: Optional[list[str]] = None,
+) -> tuple[dict[str, Number], dict[str, dict[str, Number]]]:
     if metric_names is None:
         metric_names = DEFAULT_METRICS
 
-    metric_objects = [
-        ir_measures.parse_measure(metric) for metric in metric_names
-    ]
+    metric_objects = [ir_measures.parse_measure(metric) for metric in metric_names]
     aggregated_metrics = ir_measures.calc_aggregate(metric_objects, qrels, run)
 
     per_query_metrics = defaultdict(dict)
@@ -93,15 +88,17 @@ def calculate_metrics(
 
 
 def calculate_metrics_to_file(
-    run: Dict[str, Dict[str, Number]],
-    qrels: Dict[str, Dict[str, Number]],
+    run: dict[str, dict[str, Number]],
+    qrels: dict[str, dict[str, Number]],
     output_folder: str,
-    metric_names: Optional[List[str]] = None,
+    metric_names: Optional[list[str]] = None,
 ) -> None:
     aggregated_metrics, per_query_metrics = calculate_metrics(
         run, qrels, metric_names=metric_names
     )
 
+
+##################################################################
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     aggregated_filename = output_folder / "aggregated_metrics.json"
@@ -114,6 +111,7 @@ def calculate_metrics_to_file(
 
     with open(per_query_filename, "w") as f:
         json.dump(per_query_metrics, f, sort_keys=True, indent=4)
+##################################################################
 
     pretty_aggregated_filename = aggregated_filename.with_suffix(".txt")
     pretty_print_aggregated_metrics_to_file(
@@ -132,7 +130,7 @@ def calculate_metrics_to_file(
 def load_standard_format_as_run(
     input_jsonl: str,
     score_key: str = "score",
-) -> Dict[str, Dict[str, Number]]:
+) -> dict[str, dict[str, Number]]:
     """
     Load the standard format as a run.
 
@@ -146,9 +144,7 @@ def load_standard_format_as_run(
         run = {}
         for line in reader:
             query_id = line["query"]["id"]
-            run[query_id] = {
-                str(item["id"]): item[score_key] for item in line["items"]
-            }
+            run[query_id] = {str(item["id"]): item[score_key] for item in line["items"]}
 
     return run
 
@@ -174,9 +170,7 @@ def pretty_print_standard_format(
                     item_id = item["id"]
                     item_text = item["content"]
                     item_score = item[score_key]
-                    f.write(
-                        f"\t{i + 1}. {item_text} ({item_id}) - {item_score}\n"
-                    )
+                    f.write(f"\t{i + 1}. {item_text} ({item_id}) - {item_score}\n")
                 f.write("\n")
                 f.write("-" * 80)
                 f.write("\n")

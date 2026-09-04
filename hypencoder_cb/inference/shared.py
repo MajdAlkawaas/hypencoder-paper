@@ -1,7 +1,7 @@
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Iterable, Optional
 
 import numpy as np
 import torch
@@ -29,7 +29,7 @@ class Item:
     id: Optional[str] = None
     score: Optional[float] = None
     type: Optional[str] = None
-    other: Dict = field(default_factory=dict)
+    other: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -45,7 +45,7 @@ class EmbeddingQuery(BaseQuery):
 @dataclass
 class TextQuery(BaseQuery):
     text: Optional[str] = None
-    other: Dict = field(default_factory=dict)
+    other: dict = field(default_factory=dict)
 
 
 class EncodedItem(BaseDoc):
@@ -53,12 +53,14 @@ class EncodedItem(BaseDoc):
     representation: NdArray
     id: Optional[str] = None
 
+
 # This is a specific schema for float16 embeddings.
 # We parameterize NdArray with the exact numpy dtype.
 class EncodedItemFloat16(BaseDoc):
     text: str
     representation: NdArray
     id: Optional[str] = None
+
 
 def items_from_ir_dataset(
     ir_dataset_name: str,
@@ -92,9 +94,7 @@ class BaseEncoder:
     def encode(self, text: str) -> BaseEncodedRepresentation:
         raise NotImplementedError()
 
-    def batch_encode(
-        self, texts: List[str]
-    ) -> List[BaseEncodedRepresentation]:
+    def batch_encode(self, texts: list[str]) -> list[BaseEncodedRepresentation]:
         raise NotImplementedError()
 
 
@@ -149,9 +149,7 @@ def encode_jsonl_items_to_disk(
     item_text_key: str = "item_text",
     item_id_key: str = "item_id",
 ) -> None:
-    items = items_from_jsonl(
-        input_path, text_key=item_text_key, id_key=item_id_key
-    )
+    items = items_from_jsonl(input_path, text_key=item_text_key, id_key=item_id_key)
     encode_items_to_disk(encoder, items, output_path, batch_size=batch_size)
 
 
@@ -161,18 +159,16 @@ class BaseRetriever:
 
     def retrieve_text(
         self, query: TextQuery, top_k: Optional[int] = None
-    ) -> List[Item]:
+    ) -> list[Item]:
         raise NotImplementedError
 
-    def retrieve(
-        self, query: BaseQuery, top_k: Optional[int] = None
-    ) -> List[Item]:
+    def retrieve(self, query: BaseQuery, top_k: Optional[int] = None) -> list[Item]:
         raise NotImplementedError
 
 
 def load_encoded_items_from_disk(
     encoded_items_path: str,
-    target_dtype: str = "float32" # <-- Added new parameter with a default
+    target_dtype: str = "float32",  # <-- Added new parameter with a default
 ) -> Iterable[EncodedItem]:
     print(f"Deserializing corpus with target dtype: {target_dtype}")
 
@@ -180,18 +176,16 @@ def load_encoded_items_from_disk(
     if target_dtype.lower() in ["float16", "fp16"]:
         # If the user wants float16, use the specific float16 schema.
         schema_to_use = EncodedItemFloat16
-        print(f"HERE: float16")
     else:
         # Otherwise, use the default float32 schema.
         schema_to_use = EncodedItem
-        print(f"HERE: float32")
-        
+
     return DocList[schema_to_use].pull(
         f"file://{encoded_items_path}", show_progress=True
     )
 
 
-def query_to_json(query: BaseQuery) -> Dict:
+def query_to_json(query: BaseQuery) -> dict:
     output = {}
 
     if hasattr(query, "text") and query.text is not None:
@@ -205,7 +199,7 @@ def query_to_json(query: BaseQuery) -> Dict:
 
 def item_to_json(
     item: Item, include_content: bool = True, include_type: bool = True
-) -> Dict:
+) -> dict:
     output = {}
 
     if item.text is not None and include_content:
@@ -224,9 +218,9 @@ def item_to_json(
 
 
 def query_items_to_jsonl(
-    query_items: Iterable[Tuple[TextQuery, List[Item]]],
+    query_items: Iterable[tuple[TextQuery, list[Item]]],
     output_path: str,
-    item_to_jsonl_kwargs: Optional[Dict] = None,
+    item_to_jsonl_kwargs: Optional[dict] = None,
     append: bool = False,
 ) -> None:
 
@@ -241,8 +235,7 @@ def query_items_to_jsonl(
                 {
                     "query": query_to_json(query),
                     "items": [
-                        item_to_json(item, **item_to_jsonl_kwargs)
-                        for item in items
+                        item_to_json(item, **item_to_jsonl_kwargs) for item in items
                     ],
                 }
             )
@@ -254,7 +247,7 @@ def retrieve_items(
     top_k: Optional[int] = None,
     track_time: bool = False,
     track_time_file: Optional[str] = None,
-) -> Iterable[Tuple[TextQuery, List[Item]]]:
+) -> Iterable[tuple[TextQuery, list[Item]]]:
     if track_time:
         start_time = time.time()
         num_queries = 0
@@ -296,11 +289,12 @@ def retrieve_for_ir_dataset_queries(
     include_type: bool = True,
     include_content: bool = True,
     append_output: bool = False,
-    skip_queries: Optional[Set[str]] = None,
+    skip_queries: Optional[set[str]] = None,
     track_time: bool = False,
     track_time_file: Optional[str] = None,
 ) -> None:
     import ir_datasets
+
     print(f"retrieve_for_ir_dataset_queries: saving time in {track_time_file}")
     dataset = ir_datasets.load(ir_dataset_name)
 
@@ -339,7 +333,7 @@ def retrieve_for_jsonl_queries(
     include_content: bool = True,
     query_id_key: str = "query_id",
     query_text_key: str = "query_text",
-    max_p_converter: Optional[Callable[[List[Item]], List[Item]]] = None,
+    max_p_converter: Optional[Callable[[list[Item]], list[Item]]] = None,
 ) -> None:
     with JsonlReader(query_jsonl) as reader:
         queries = [
@@ -353,11 +347,7 @@ def retrieve_for_jsonl_queries(
         (
             (
                 query,
-                (
-                    max_p_converter(items)
-                    if max_p_converter is not None
-                    else items
-                ),
+                (max_p_converter(items) if max_p_converter is not None else items),
             )
             for query, items in query_items
         ),

@@ -1,0 +1,61 @@
+logging_config:
+  # Set to "WARNING" for a quiet run, "INFO" to see setup steps.
+  script_log_level: "INFO" 
+  # Set this to true ONLY when you need to debug the batch creation process itself.
+  log_collator: false
+
+model_config:
+  checkpoint_path: jfkback/hypencoder.6_layer
+  tokenizer_pretrained_model_name_or_path: google-bert/bert-base-uncased
+  query_encoder_kwargs:
+    freeze_transformer: true
+    model_name_or_path: google-bert/bert-base-uncased
+    converter_kwargs:
+      # This defines the LARGEST q-net. The hidden dim is 768.
+      vector_dimensions: [768, 768, 768, 768, 768, 768, 768, 1]
+      activation_type: relu
+      do_residual_on_last: false
+  passage_encoder_kwargs:
+    freeze_transformer: true
+    model_name_or_path: google-bert/bert-base-uncased
+    pooling_type: cls
+  shared_encoder: true
+
+  loss_type:
+    - matryoshka_dim_margin_mse
+  loss_kwargs:
+    - matryoshka_dims: [128, 256, 512, 768]
+
+
+data_config:
+  training_huggingface_dataset: null
+  training_data_jsonl: from_cached_msmarco_train_local.jsonl # <-- Point to your new local file
+  training_data_split: train
+  positive_filter_type: first
+  num_positives_to_sample: 1
+  num_negatives_to_sample: 7
+
+    
+
+
+trainer_config:
+  hf_trainer_config:
+    output_dir: # path 
+    overwrite_output_dir: true
+    num_train_epochs: 15
+    learning_rate: 5e-5 
+    lr_scheduler_type: "cosine" 
+    warmup_ratio: 0.1
+    save_strategy: "epoch"     
+    save_total_limit: 10      
+    
+    # --- Other performance settings ---
+    per_device_train_batch_size: 256
+    gradient_accumulation_steps: 2
+    dataloader_num_workers: 8 
+    logging_steps: 200
+    bf16: true
+    fp16: false 
+    # --- W&B INTEGRATION ---
+    report_to: "wandb"
+    run_name: "wandb run name"

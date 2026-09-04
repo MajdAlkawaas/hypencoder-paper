@@ -1,4 +1,4 @@
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, Union
 
 import fire
 import torch
@@ -10,7 +10,7 @@ from hypencoder_cb.utils.jsonl_utils import JsonlWriter
 from hypencoder_cb.utils.torch_utils import dtype_lookup
 
 
-def get_embeddings(path: str) -> Tuple[torch.Tensor, List[str], List[str]]:
+def get_embeddings(path: str) -> tuple[torch.Tensor, list[str], list[str]]:
     encoded_items = load_encoded_items_from_disk(path)
 
     item_embeddings = torch.stack(
@@ -28,7 +28,7 @@ def embedding_search(
     batch_size: int = 10000,
     top_k: int = 100,
     distance: str = "l2",
-) -> Iterable[Tuple[torch.Tensor, int]]:
+) -> Iterable[tuple[torch.Tensor, int]]:
     batch_offset = 0
     for batch in tqdm(batchify_slicing(query_embeddings, batch_size)):
         if distance == "l2":

@@ -1,13 +1,13 @@
 import copy
 import functools
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import fire
 from tqdm import tqdm
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
-from hypencoder_cb.utils.io_utils import JsonlReader, JsonlWriter
 from hypencoder_cb.utils.iterator_utils import batchify
+from hypencoder_cb.utils.jsonl_utils import JsonlReader, JsonlWriter
 
 
 def tokenizer_standard_format_file(
@@ -18,15 +18,13 @@ def tokenizer_standard_format_file(
     query_max_length: int = 32,
     item_max_length: int = 512,
     batch_size: int = 1000,
-    query_tokenizer_fn: Optional[
-        Callable[[List[str]], List[List[int]]]
-    ] = None,
-    item_tokenizer_fn: Optional[Callable[[List[str]], List[List[int]]]] = None,
+    query_tokenizer_fn: Optional[Callable[[list[str]], list[list[int]]]] = None,
+    item_tokenizer_fn: Optional[Callable[[list[str]], list[list[int]]]] = None,
 ) -> None:
     if isinstance(tokenizer, str):
         tokenizer = AutoTokenizer.from_pretrained(tokenizer)
 
-    def default_tokenizer_fn(texts: List[str], **kwargs):
+    def default_tokenizer_fn(texts: list[str], **kwargs):
         return tokenizer(
             texts,
             add_special_tokens=add_special_tokens,

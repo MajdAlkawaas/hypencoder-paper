@@ -1,10 +1,18 @@
+import logging
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 import torch
 import torch.nn as nn
 
 from hypencoder_cb.modeling.shared import EncoderOutput
+
+from .q_net import MatryoshkaQNetFactory, RepeatedDenseBlockConverter
+
+# from hypencoder_cb.modeling.hypencoder import HypencoderDualEncoder # For type hinting
+
+if TYPE_CHECKING:
+    from .hypencoder import HypencoderOutput
 
 
 def pos_neg_triplets_from_similarity(similarity: torch.Tensor) -> torch.Tensor:
@@ -39,13 +47,13 @@ def pos_neg_triplets_from_similarity(similarity: torch.Tensor) -> torch.Tensor:
     # positive score N times. N is the number of negative items per query.
     output[:, 0] = positives.repeat_interleave(num_negatives_per_query)
 
-    # Filling the second column with the negative scores by placing the 
+    # Filling the second column with the negative scores by placing the
     # scores of the query's negative items next to the repeated positive
     # score of this query.
     for i in range(num_queries):
-        output[
-            i * num_negatives_per_query : (i + 1) * num_negatives_per_query, 1
-        ] = similarity[i, 1:]
+        output[i * num_negatives_per_query : (i + 1) * num_negatives_per_query, 1] = (
+            similarity[i, 1:]
+        )
 
     return output
 
@@ -77,7 +85,7 @@ def no_in_batch_negatives_hypecoder_similarity(
     num_items, item_emb_dim = item_embeddings.shape
     num_queries = query_models.num_queries
 
-    # Validates that the number of items/documents is multiple of the 
+    # Validates that the number of items/documents is multiple of the
     # number of queries.
     assert num_items % num_queries == 0
 
@@ -87,7 +95,7 @@ def no_in_batch_negatives_hypecoder_similarity(
         assert num_items_per_query == required_num_items_per_query
 
     # Reshape the item embeddings into a structured batch, where each
-    # row corresponds to a query. 
+    # row corresponds to a query.
     item_embeddings = item_embeddings.view(
         num_queries, num_items_per_query, item_emb_dim
     )
@@ -131,13 +139,11 @@ def in_batch_negatives_hypecoder_similarity(
     # (num_queries, num_items, item_emb_dim)
     item_embeddings = item_embeddings.unsqueeze(0).repeat(num_queries, 1, 1)
 
-    # Passes the expanded tensor to the q-net. 
-    # The q-net is batched by num_queries. 
+    # Passes the expanded tensor to the q-net.
+    # The q-net is batched by num_queries.
     # The q-net applies the query-specific scoring function to each
     # item/document in the batch
-    similarity = (
-        query_models(item_embeddings).view(num_queries, num_items).squeeze()
-    )
+    similarity = query_models(item_embeddings).view(num_queries, num_items).squeeze()
 
     return similarity
 
@@ -185,7 +191,7 @@ class SimilarityAndLossBase(nn.Module):
         labels: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> SimilarityAndLossOutput:
-        
+
         similarity = self._get_similarity(query_output, passage_output, **kwargs)
 
         loss = self.scale * self._loss(similarity, labels, **kwargs)
@@ -233,8 +239,8 @@ class MarginMSELoss(SimilarityAndLossBase):
         assert num_similarity_queries == num_label_queries
 
         # --- THESE ARE THE LINES TO REMOVE ---
-        # normalization_fn() method does not exit anywhere in this 
-        # codebase or in pytorch or huggingface 
+        # normalization_fn() method does not exit anywhere in this
+        # codebase or in pytorch or huggingface
         # similarity = self.normalization_fn(similarity)
         # labels = self.normalization_fn(labels)
         # -------------------------------------
@@ -243,19 +249,17 @@ class MarginMSELoss(SimilarityAndLossBase):
         # Calculating the margin score from teacher model
         teacher_margin = labels[:, 0] - labels[:, 1]
 
-        # Calculates the MSE between the student's margin score and 
+        # Calculates the MSE between the student's margin score and
         # the teacher margin score
         return self.loss(margin.squeeze(), teacher_margin.squeeze())
 
 
 class CrossEntropyLoss(SimilarityAndLossBase):
-
     # Generic implementation of a contrastive, cross-entropy-based loss.
     def __init__(
         self,
         use_in_batch_negatives: bool = True,
         only_use_first_item: bool = False,
-        
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -285,7 +289,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
         device: torch.device,
     ) -> torch.Tensor:
         num_items_per_query = num_items // num_queries
-        
+
         if self.use_in_batch_negatives:
             # the correct "class" for query i is the positive document
             # at index i * items_per_query
@@ -306,7 +310,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
 
         return targets
 
-    # Overrides the parent class implementation because it needs to 
+    # Overrides the parent class implementation because it needs to
     # create its target labels
     def forward(
         self,
@@ -315,9 +319,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
         labels: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> SimilarityAndLossOutput:
-        similarity = self._get_similarity(
-            query_output, passage_output, **kwargs
-        )
+        similarity = self._get_similarity(query_output, passage_output, **kwargs)
 
         target = self._get_target(
             similarity.size(0), similarity.size(1), device=similarity.device
@@ -331,7 +333,7 @@ class CrossEntropyLoss(SimilarityAndLossBase):
 class HypencoderMarginMSELoss(MarginMSELoss):
     # This inherits the loss calculation logic from the parent class
     # and provide its implementation of the _get_similarity method
-    
+
     def _get_similarity(
         self,
         query_output: EncoderOutput,
@@ -339,7 +341,6 @@ class HypencoderMarginMSELoss(MarginMSELoss):
         **kwargs,
     ) -> torch.Tensor:
         # The class's implementation of _get_similarity().
-
 
         # It passes the callable q-net and the doc embeddings to the
         # bellow method
@@ -372,13 +373,10 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
     def __init__(
         self,
         use_query_embedding_representation: bool = False,
-
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.use_query_embedding_representation = (
-            use_query_embedding_representation
-        )
+        self.use_query_embedding_representation = use_query_embedding_representation
 
     def _get_similarity(
         self,
@@ -424,3 +422,84 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
             )
 
         return similarity
+
+
+class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
+    """
+    Calculates MarginMSE loss across multiple q-net widths (Matryoshka dimensions).
+    """
+
+    def __init__(
+        self,
+        matryoshka_dims: list[int],
+        original_qnet_converter: "RepeatedDenseBlockConverter",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if not matryoshka_dims:
+            raise ValueError("matryoshka_dims cannot be empty.")
+        # The dimensions to supervise, e.g., [16, 32, 128, 256, 512, 768]
+        self.matryoshka_dims = sorted(matryoshka_dims)
+        self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
+            original_qnet_converter=original_qnet_converter
+        )
+        logging.info(
+            f"Initializing Matryoshka Loss for dimensions: {self.matryoshka_dims}"
+        )
+
+    def forward(
+        self,
+        query_output: "HypencoderOutput",
+        passage_output: "EncoderOutput",
+        labels: Optional[torch.Tensor] = None,
+        # model: Optional["HypencoderDualEncoder"] = None
+        # Pass the model to access the converter
+    ) -> "SimilarityAndLossOutput":
+
+        # Get the full-size generated parameters from the query encoder's output
+        full_matrices = query_output.generated_matrices
+        full_vectors = query_output.generated_vectors
+        item_embeddings = passage_output.representation
+
+        if full_matrices is None or full_vectors is None:
+            raise ValueError(
+                "Matryoshka loss requires 'generated_matrices' and 'generated_vectors'."
+            )
+
+        total_loss = torch.tensor(0.0, device=item_embeddings.device)
+        num_dims_supervised = len(self.matryoshka_dims)
+
+        matryoshka_qnets = self.matryoshka_qnet_factory.build(
+            full_matrices,
+            full_vectors,
+            self.matryoshka_dims,
+            is_training=True,
+        )
+
+        # Loop through each specified Matryoshka dimension
+
+        # TODO: Ensure that the keys are ordered.
+        # TODO: Ensure that the dict contains the correct dims
+        for dim, q_net_at_dim in matryoshka_qnets.items():
+            similarity_at_dim = no_in_batch_negatives_hypecoder_similarity(
+                q_net_at_dim, item_embeddings
+            )
+
+            # 5. Calculate the loss for this dimension
+            triplet_similarity = pos_neg_triplets_from_similarity(similarity_at_dim)
+            loss_at_dim = self._loss(triplet_similarity, labels)
+
+            # TODO: Add option for weighted loss
+            total_loss += loss_at_dim
+
+        average_loss = total_loss / num_dims_supervised
+
+        # For logging purposes, we can return the similarity from the largest q-net
+        full_size_q_net = query_output.representation
+
+        # TODO: Why are we calculating the similarity using the full size Q-net
+        # is this just for logging purposes or are we using it somewhere else
+        final_similarity = no_in_batch_negatives_hypecoder_similarity(
+            full_size_q_net, item_embeddings
+        )
+        return SimilarityAndLossOutput(similarity=final_similarity, loss=average_loss)
