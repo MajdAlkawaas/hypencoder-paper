@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Callable, Optional
 
 import torch
@@ -58,7 +58,7 @@ def pos_neg_triplets_from_similarity(similarity: torch.Tensor) -> torch.Tensor:
     return output
 
 
-def no_in_batch_negatives_hypecoder_similarity(
+def no_in_batch_negatives_hypencoder_similarity(
     query_models: Callable,
     item_embeddings: torch.Tensor,
     required_num_items_per_query: Optional[int] = None,
@@ -344,7 +344,7 @@ class HypencoderMarginMSELoss(MarginMSELoss):
 
         # It passes the callable q-net and the doc embeddings to the
         # bellow method
-        similarity = no_in_batch_negatives_hypecoder_similarity(
+        similarity = no_in_batch_negatives_hypencoder_similarity(
             query_output.representation,
             passage_output.representation,
         )
@@ -417,7 +417,7 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
                 query_model, passage_embeddings
             )
         else:
-            similarity = no_in_batch_negatives_hypecoder_similarity(
+            similarity = no_in_batch_negatives_hypencoder_similarity(
                 query_output.representation, passage_output.representation
             )
 
@@ -481,7 +481,7 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
         # TODO: Ensure that the keys are ordered.
         # TODO: Ensure that the dict contains the correct dims
         for dim, q_net_at_dim in matryoshka_qnets.items():
-            similarity_at_dim = no_in_batch_negatives_hypecoder_similarity(
+            similarity_at_dim = no_in_batch_negatives_hypencoder_similarity(
                 q_net_at_dim, item_embeddings
             )
 
@@ -499,7 +499,98 @@ class HypencoderMatryoshkaDimMarginMSELoss(HypencoderMarginMSELoss):
 
         # TODO: Why are we calculating the similarity using the full size Q-net
         # is this just for logging purposes or are we using it somewhere else
-        final_similarity = no_in_batch_negatives_hypecoder_similarity(
+        final_similarity = no_in_batch_negatives_hypencoder_similarity(
             full_size_q_net, item_embeddings
         )
+        return SimilarityAndLossOutput(similarity=final_similarity, loss=average_loss)
+
+
+class HypencoderMatryoshkaCrossEntropyLoss(HypencoderCrossEntropyLoss):
+    """
+    Calculates CrossEntropy (InfoNCE) loss across multiple q-net 
+    widths (Matryoshka dimensions). Used for fine-tuning on sparsely
+    labeled data without continuous teacher scores.
+    """
+
+    def __init__(
+        self,
+        matryoshka_dims: list[int],
+        original_qnet_converter: "RepeatedDenseBlockConverter",
+        **kwargs,
+    ):
+        # Initialize the parent CrossEntropyLoss
+        super().__init__(**kwargs)
+
+        if not matryoshka_dims:
+            raise ValueError("matryoshka_dims cannot be empty.")
+
+        self.matryoshka_dims = sorted(matryoshka_dims)
+
+        self.matryoshka_qnet_factory = MatryoshkaQNetFactory(
+            original_qnet_converter=original_qnet_converter
+        )
+        logger.info(f"Initializing Matryoshka CE Loss for dims: {self.matryoshka_dims}")
+
+    def forward(
+        self,
+        query_output: "HypencoderOutput",
+        passage_output: EncoderOutput,
+        labels: Optional[torch.Tensor] = None,
+    ) -> SimilarityAndLossOutput:
+
+        full_matrices = query_output.generated_matrices
+        full_vectors = query_output.generated_vectors
+        item_embeddings = passage_output.representation
+
+        if full_matrices is None or full_vectors is None:
+            raise ValueError(
+                "Matryoshka loss requires 'generated_matrices' and 'generated_vectors'."
+            )
+
+        total_loss = torch.tensor(0.0, device=item_embeddings.device)
+        num_dims_supervised = len(self.matryoshka_dims)
+
+        # TODO: Question, is this actually required?
+        if num_dims_supervised == 0:
+            final_similarity = self._get_similarity(query_output, passage_output)
+            return SimilarityAndLossOutput(similarity=final_similarity, loss=total_loss)
+
+        # 1. Build all Q-Nets for the requested dimensions at once using the factory
+        matryoshka_qnets = self.matryoshka_qnet_factory.build(
+            full_matrices,
+            full_vectors,
+            self.matryoshka_dims,
+            is_training=True,
+        )
+
+        # 2. Get the target indices for CrossEntropy.
+        # The positive document is the first one in the contiguous block for each query.
+        num_items = item_embeddings.shape[0]
+        # Fallback to matrix shape if num_queries isn't explicitly on the representation
+        num_queries = getattr(
+            query_output.representation, "num_queries", full_matrices[0].shape[0]
+        )
+        target = self._get_target(num_queries, num_items, item_embeddings.device)
+
+        # 3. Loop through dimensions and compute loss
+        for dim, q_net_at_dim in matryoshka_qnets.items():
+            # Clever trick: we create a lightweight copy of the query_output dataclass,
+            # injecting our specific dimension's q_net as the 'representation'. This 
+            # allows us to perfectly reuse the parent's complex _get_similarity logic.
+            dummy_query_output = replace(query_output, representation=q_net_at_dim)
+
+            # Compute similarities for this dime (handles in-batch negatives automatically)
+            similarity_at_dim = self._get_similarity(dummy_query_output, passage_output)
+
+            # Compute CrossEntropy loss against the targets
+            loss_at_dim = self._loss(similarity_at_dim, target)
+
+            total_loss += loss_at_dim
+
+        # 4. Average the loss across all supervised dimensions
+        average_loss = total_loss / num_dims_supervised
+
+        # For logging purposes, return the similarity matrix of the full-sized Q-Net
+        final_similarity = self._get_similarity(query_output, passage_output)
+
         return SimilarityAndLossOutput(similarity=final_similarity, loss=average_loss)
