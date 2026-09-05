@@ -108,7 +108,7 @@ def no_in_batch_negatives_hypencoder_similarity(
     return similarity
 
 
-def in_batch_negatives_hypecoder_similarity(
+def in_batch_negatives_hypencoder_similarity(
     query_models: Callable,
     item_embeddings: torch.Tensor,
     required_num_items_per_query: Optional[int] = None,
@@ -413,7 +413,7 @@ class HypencoderCrossEntropyLoss(CrossEntropyLoss):
 
                 passage_embeddings = passage_embeddings[indices]
 
-            similarity = in_batch_negatives_hypecoder_similarity(
+            similarity = in_batch_negatives_hypencoder_similarity(
                 query_model, passage_embeddings
             )
         else:
