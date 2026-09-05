@@ -18,6 +18,7 @@ from hypencoder_cb.modeling.shared import (
 from hypencoder_cb.modeling.similarity_and_losses import (
     HypencoderCrossEntropyLoss,
     HypencoderMarginMSELoss,
+    HypencoderMatryoshkaCrossEntropyLoss,
     HypencoderMatryoshkaDimMarginMSELoss,
 )
 
@@ -435,6 +436,15 @@ class HypencoderDualEncoder(BaseDualEncoder):
                         original_qnet_converter=original_qnet_converter, **loss_kwargs
                     )
                 )
+            elif loss_type == "matryoshka_cross_entropy":
+                original_qnet_converter = self.query_encoder.weight_to_model_converter
+
+                self.similarity_losses.append(
+                    HypencoderMatryoshkaCrossEntropyLoss(
+                        original_qnet_converter=original_qnet_converter, **loss_kwargs
+                        )
+                )
+
             else:
                 raise ValueError(f"Unknown loss type: {loss_type}")
 
