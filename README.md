@@ -1,9 +1,9 @@
 # Matryoshka Hypencoder
+
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Matryoshka%20Hypencoder-blue)](https://huggingface.co/majdalkawaas/matryoshka-hypencoder)
+[![arXiv](https://img.shields.io/badge/arXiv-2607.17457-b31b1b.svg)](https://arxiv.org/abs/2607.17457)
+
 This is the official Repository for "The Matryoshka Hypencoder".
-
-This repo is still a work-in-progress, but all the core code, data, and models are now available. This means you can evaluate the Matryoshka Hypencoder, use a pre-trained Matryoshka Hypencoder off-the-shelf, and reproduce the major results from the paper exactly.
-
-
 
 This repository contains the code and experiments for the [The Matryoshka Hypencoder](https://arxiv.org/pdf/2607.17457) you can also find our proposed [Matryoshka Hypencoder model on huggingface](https://huggingface.co/majdalkawaas/matryoshka-hypencoder) This work builds upon the original [Hypencoder architecture](https://arxiv.org/abs/2502.05364) by Killingback et al., extending it with a novel, flexible training paradigm inspired by Matryoshka Representation Learning (MRL).
 
@@ -107,7 +107,7 @@ Launch the entire campaign with a single command:
 python hypencoder_cb/inference/run_evaluation.py --config_path="path/to/your/evaluation_config.yaml"
 ```
 
-## Citation (Coming soon)
+## Citation 
 ```
 @inproceedings{Alkawaas_2026,
    title={The Matryoshka Hypencoder},
@@ -119,4 +119,25 @@ python hypencoder_cb/inference/run_evaluation.py --config_path="path/to/your/eva
    year={2026},
    month=July, pages={3574–3579} }
 
+```
+
+
+### Original Hypencoder:
+```
+@inproceedings{hypencoder,
+    author = {Killingback, Julian and Zeng, Hansi and Zamani, Hamed},
+    title = {Hypencoder: Hypernetworks for Information Retrieval},
+    year = {2025},
+    isbn = {9798400715921},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3726302.3729983},
+    doi = {10.1145/3726302.3729983},
+    booktitle = {Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+    pages = {2372–2383},
+    numpages = {12},
+    keywords = {learning to rank, neural ranking models, retrieval models},
+    location = {Padua, Italy},
+    series = {SIGIR '25}
+}
 ```
