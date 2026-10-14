@@ -2,6 +2,8 @@
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Matryoshka%20Hypencoder-blue)](https://huggingface.co/majdalkawaas/matryoshka-hypencoder)
 [![arXiv](https://img.shields.io/badge/arXiv-2607.17457-b31b1b.svg)](https://arxiv.org/abs/2607.17457)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
 This is the official Repository for "The Matryoshka Hypencoder".
 
